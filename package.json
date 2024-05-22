@@ -11,7 +11,7 @@
     "env": "shopify app env",
     "start": "remix-serve ./build/server/index.js",
     "docker-start": "npm run setup && npm run start",
-    "setup": "prisma generate && prisma migrate deploy",
+    "setup": "prisma generate && prisma db push",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "shopify": "shopify",
     "prisma": "prisma",
@@ -20,7 +20,7 @@
   },
   "type": "module",
   "engines": {
-    "node": ">=16.0.0 <22.0.0"
+    "node": "21.6.2"
   },
   "dependencies": {
     "@prisma/client": "^5.11.0",
@@ -32,6 +32,7 @@
     "@shopify/polaris": "^12.0.0",
     "@shopify/shopify-api": "^10.0.0",
     "@shopify/shopify-app-remix": "^2.8.2",
+    "@shopify/shopify-app-session-storage-mongodb": "^3.0.5",
     "@shopify/shopify-app-session-storage-prisma": "^4.0.5",
     "isbot": "^5.1.0",
     "prisma": "^5.11.0",

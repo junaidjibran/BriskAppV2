@@ -1,25 +1,107 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
-// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
-// enough when changing adapters.
-// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
-  provider = "sqlite"
-  url      = "file:dev.sqlite"
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
-model Session {
-  id          String    @id
+model shopify_sessions {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  accessToken String
+  id_         String  @map("id")
+  isOnline    Boolean
+  scope       String
   shop        String
   state       String
-  isOnline    Boolean   @default(false)
-  scope       String?
-  expires     DateTime?
-  accessToken String
-  userId      BigInt?
+}
+
+model vectors {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  title_english String
+  value_english String
+  title_urdu    String
+  value_urdu    String
+  img_cdn       String
+  type          VectorType      @default(CustomOrder)
+  value_type    VectorValueType @default(Constant)
+}
+
+model manufacturing_status {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  color      String?
+  color_code String?
+}
+
+model factories {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  title    String
+  location String
+  // orders   shopify_orders[]
+}
+
+model shopify_orders {
+  id               String @id @default(auto()) @map("_id") @db.ObjectId
+  shopify_order_id String @unique
+  order_name       String
+  factory          String?
+  line_items       Json[]
+  shop             String
+  created_at       DateTime      
+}
+
+model shop_shirt {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  product_id  String    @unique
+  vectors_ids String[]
+  created_at  DateTime? @default(now())
+  shop        String
+}
+
+model notes {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  order_id     String
+  line_item_id String
+  created_at   DateTime? @default(now())
+  note         String?
+  user_name    String?
+  shop         String
+}
+
+model orders {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  order_id     Int
+  order_number Int
+  line_items   Json[]
+}
+
+model order_tag_logs {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  order_id     Int
+  order_number Int
+  message      String
+  created_at   DateTime? @default(now())
+}
+
+model users {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  token        String
+  email        String    @unique
+  username     String
+  access       String[]
+  expire_at    DateTime
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+enum VectorType {
+  CustomOrder
+  ShopShirt
+}
+
+enum VectorValueType {
+  Constant
+  Dynamic
 }
