@@ -6,6 +6,7 @@ import {
     Page,
     Button,
     Filters,
+    EmptyState,
 } from "@shopify/polaris";
 import prisma from "../db.server";
 import { json } from "@remix-run/node";
@@ -19,15 +20,19 @@ import CustomBadge from "../components/badge";
 import { hasNextPage, hasPreviousPage } from "../controllers/paginationController";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
-import { loggedInCheckRedirect } from "../helpers/session.server";
+import { deleteSession } from "../helpers/session.server";
+import NotLoggedInScreen from "../components/notLoggedInScreen";
 
 export const loader = async ({ request, params }) => {
-    await loggedInCheckRedirect(request)
     try {
-
-        // if user is not logedIn it redirects to login page
         const { admin, session } = await authenticate.admin(request);
+        // if user is not logedIn it redirects to login page
         const shop = session?.shop
+
+        const deleteSessionIfNotLogin = await deleteSession(request)
+        if (deleteSessionIfNotLogin) {
+            return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+        }
 
         const url = new URL(request.url);
         const cursorParam = url.searchParams.get("cursor");
@@ -259,6 +264,12 @@ export default function Orders({ params }) {
             )
         }
     );
+
+    if (loadedData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
 
 
     // const isloading = nav.state === "loading";

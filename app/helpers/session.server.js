@@ -39,8 +39,24 @@ const loggedInCheckRedirect = async (request) => {
             },
         })
     }
-    // if (!isRedirect)
-    //     return isLogedIn
+}
+
+const deleteSession = async (request) => {
+    const session = await getSession(
+        request.headers.get("Cookie")
+    );
+    const isLogedIn = session.has("customToken")
+
+    // To check user is logged In. if not delete session form cookies.
+    if (!isLogedIn) {
+        return { 
+            headers: {
+                "Set-Cookie": await destroySession(session),
+            } 
+        }
+    }
+
+    return false
 }
 
 const loggedInCheck = async (request) => {
@@ -54,4 +70,4 @@ const loggedInCheck = async (request) => {
     return isLogedIn
 }
 
-export { getSession, commitSession, destroySession, loggedInCheckRedirect, loggedInCheck };
+export { getSession, commitSession, destroySession, loggedInCheckRedirect, loggedInCheck, deleteSession };

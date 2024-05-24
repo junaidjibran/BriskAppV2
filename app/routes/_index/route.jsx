@@ -10,6 +10,8 @@ export const loader = async ({ request }) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
+  console.log("route _index.js file")
+
   return json({ showForm: Boolean(login) });
 };
 

@@ -12,13 +12,18 @@ import {
     useNavigate
   } from "@remix-run/react";
 import Loader from '../components/loader';
-
-
+import NotLoggedInScreen from "../components/notLoggedInScreen";
+import { deleteSession } from "../helpers/session.server";
 
 export async function loader({request}) {
     const { admin } = await authenticate.admin(request);
     if(!admin){
         return json({err: 'Not authenticated'})
+    }
+
+    const deleteSessionIfNotLogin = await deleteSession(request)
+    if (deleteSessionIfNotLogin) {
+        return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
     }
 
     const vectorsData = await  prisma.vectors.findMany({
@@ -144,6 +149,12 @@ export default function ShopShirtNew() {
             encType: 'multipart/form-data',
             relative: 'route',
         })
+    }
+
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
     }
 
     return (

@@ -22,9 +22,15 @@ import SettingsNav from '../../components/settingsNav';
 // import Loader from '../components/loader';
 import prisma from '../../db.server';
 import Loader from '../../components/loader';
+import NotLoggedInScreen from '../../components/notLoggedInScreen';
+import { deleteSession } from '../../helpers/session.server';
 
-export async function loader() {
+export async function loader(request) {
     // @ts-ignore
+    const deleteSessionIfNotLogin = await deleteSession(request)
+    if (deleteSessionIfNotLogin) {
+        return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+    }
     const statuses = await prisma.factories.findMany();
     return json(statuses)
 }
@@ -251,6 +257,14 @@ export default function FactorySetting() {
     }
 
     const handleClearButtonClick = useCallback(() => setTextFieldValue(''), []);
+
+
+    if (data?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
+
     return (
         <>
         {nav.state === 'loading' ? <Loader/> : null}

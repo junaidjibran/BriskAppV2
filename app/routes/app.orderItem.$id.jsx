@@ -30,11 +30,19 @@ import { prismaCreateNote, prismaDeleteNote, prismaUpdateNote } from '../control
 import { DeleteIcon, EditIcon } from '@shopify/polaris-icons';
 import { STATUS_CODES } from '../helpers/response';
 import { jsonLogs } from '../helpers/logs';
-import { loggedInCheckRedirect } from '../helpers/session.server';
+import { deleteSession } from '../helpers/session.server';
+import NotLoggedInScreen from '../components/notLoggedInScreen';
+// import { loggedInCheckRedirect } from '../helpers/session.server';
 
 export const loader = async ({ request, params }) => {
-	await loggedInCheckRedirect(request)
+	// await loggedInCheckRedirect(request)
 	try {
+
+		const deleteSessionIfNotLogin = await deleteSession(request)
+        if (deleteSessionIfNotLogin) {
+            return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+        }
+
 		if (!params.id) {
 			return json({ error: "parems: Order id or lineItem id not found" }, { status: STATUS_CODES.BAD_REQUEST })
 			// throw Error('Parems Not found!')
@@ -786,6 +794,12 @@ export default function LineItemDetails() {
 		setEditedNote('');
 		setEditNoteId(null);
 	};
+
+	if (loadedData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
 
 
 	return (

@@ -88,8 +88,9 @@ model order_tag_logs {
 model users {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
   token        String    @unique
-  email        String    @unique
+  email        String   @unique
   username     String
+  is_admin     Boolean   @default(false)
   access       String[]
   expire_at    DateTime
   created_at   DateTime @default(now())

@@ -18,14 +18,21 @@ import { fetchProductQuery } from '../queries/productQueries.js'
 import { useEffect, useState } from "react";
 import { hasNextPage, hasPreviousPage } from "../controllers/shopshirt_controller";
 import Loader from "../components/loader";
-import { loggedInCheckRedirect } from "../helpers/session.server.js";
+import NotLoggedInScreen from "../components/notLoggedInScreen.jsx";
+import { deleteSession } from "../helpers/session.server.js";
+// import { loggedInCheckRedirect } from "../helpers/session.server.js";
 
 
 export async function loader({ request }) {
-    await loggedInCheckRedirect(request)
+    // await loggedInCheckRedirect(request)
     const { admin, session } = await authenticate.admin(request);
     if (!admin) {
         return json({ err: 'Not authenticated' })
+    }
+
+    const deleteSessionIfNotLogin = await deleteSession(request)
+    if (deleteSessionIfNotLogin) {
+        return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
     }
 
     const url = new URL(request.url);
@@ -198,6 +205,13 @@ export default function Shopshirt() {
     //         handleSearchButtonClick();
     //     }
     // };
+
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
+
 
     return (
         <>

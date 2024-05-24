@@ -206,7 +206,6 @@ export default function Login({ params }) {
     return (
         <>
             <Page>
-                {/* <Card> */}
                 <div style={{ maxWidth: "300px", marginLeft: "auto", marginRight: "auto" }}>
                     <Card>
                         <Form onSubmit={submitHandle}>
@@ -235,7 +234,6 @@ export default function Login({ params }) {
                         </Form>
                     </Card>
                 </div>
-                {/* </Card> */}
             </Page>
         </>
 

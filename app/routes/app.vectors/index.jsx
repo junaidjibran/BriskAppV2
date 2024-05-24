@@ -10,7 +10,8 @@ import { prismaGetVector, prismaCreateVector, prismaUpdateVector, prismaDeleteVe
 
 import SettingsNav from "../../components/settingsNav";
 import Loader from "../../components/loader";
-import { loggedInCheckRedirect } from "../../helpers/session.server";
+import { deleteSession } from "../../helpers/session.server";
+import NotLoggedInScreen from "../../components/notLoggedInScreen";
 
 export async function action({ request }) {
     const formData = await request.formData();
@@ -88,12 +89,17 @@ export async function action({ request }) {
 }
 
 export async function loader({ request }) {
-    await loggedInCheckRedirect(request)
+    // await loggedInCheckRedirect(request)
+    const deleteSessionIfNotLogin = await deleteSession(request)
+    if (deleteSessionIfNotLogin) {
+        return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+    }
     return { data: await prismaGetVector() };
 }
 
 export default function Vectors() {
-    const loadData = useLoaderData();
+    // const loadData = useLoaderData();
+    const loadedData = useLoaderData();
     const actionData = useActionData();
     const submit = useSubmit();
     const nav = useNavigation();
@@ -103,10 +109,10 @@ export default function Vectors() {
 
     const isLoading = ["loading", "submitting"].includes(nav.state) && nav.formMethod === "POST";
 
-    console.log('loadedData', loadData)
+    console.log('loadedData', loadedData)
     console.log('actionData', actionData)
 
-    const loadedData = useLoaderData();
+    
     const validImageTypes = ['image/gif', 'image/jpeg', 'image/png'];
     // @ts-ignore
     const [vectorsList, setVectorsList] = useState([])
@@ -164,7 +170,7 @@ export default function Vectors() {
     useEffect(() => {
         console.log('ComponentMount--------', loadedData)
         if (loadedData) {
-            setVectorsList(loadedData.data)
+            setVectorsList(loadedData?.data)
         }
     }, [loadedData])
 
@@ -389,6 +395,13 @@ export default function Vectors() {
             return ""
         }
     }
+
+    if (loadedData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
+
 
     return (
         <>

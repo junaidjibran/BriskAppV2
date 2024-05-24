@@ -3,7 +3,7 @@
 client_id = "516e437308288c6e2b2ad42bda0b1693"
 name = "checkout-app"
 handle = "checkout-app-526"
-application_url = "https://respect-points-draws-brochure.trycloudflare.com"
+application_url = "https://fist-surname-hopefully-hill.trycloudflare.com"
 embedded = true
 
 [build]
@@ -16,9 +16,9 @@ scopes = "read_checkout_branding_settings,read_customers,read_delivery_customiza
 
 [auth]
 redirect_urls = [
-  "https://respect-points-draws-brochure.trycloudflare.com/auth/callback",
-  "https://respect-points-draws-brochure.trycloudflare.com/auth/shopify/callback",
-  "https://respect-points-draws-brochure.trycloudflare.com/api/auth/callback"
+  "https://fist-surname-hopefully-hill.trycloudflare.com/auth/callback",
+  "https://fist-surname-hopefully-hill.trycloudflare.com/auth/shopify/callback",
+  "https://fist-surname-hopefully-hill.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
@@ -30,7 +30,7 @@ api_version = "2023-10"
   shop_deletion_url = "https://ee52-2400-adc5-41f-6a00-b72c-c1ab-3d3d-c039.ngrok-free.app"
 
 [app_proxy]
-url = "https://respect-points-draws-brochure.trycloudflare.com"
+url = "https://fist-surname-hopefully-hill.trycloudflare.com"
 subpath = "checkout"
 prefix = "apps"
 

@@ -12,13 +12,20 @@ import {
   } from "@remix-run/react";
 import {fetchProductQuery} from '../queries/productQueries.js'
 import Loader from '../components/loader';
-import { loggedInCheckRedirect } from "../helpers/session.server.js";
+import { deleteSession } from "../helpers/session.server.js";
+import NotLoggedInScreen from "../components/notLoggedInScreen.jsx";
+// import { loggedInCheckRedirect } from "../helpers/session.server.js";
 
 export async function loader({request, params}) {
-    await loggedInCheckRedirect(request)
+    // await loggedInCheckRedirect(request)
     const { admin, session } = await authenticate.admin(request);
     if(!admin){
         return json({err: 'Not authenticated'})
+    }
+
+    const deleteSessionIfNotLogin = await deleteSession(request)
+    if (deleteSessionIfNotLogin) {
+        return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
     }
 
     const shopshirtId = params.shopshirtId
@@ -171,6 +178,12 @@ export default function ShopShirtDetail() {
             encType: 'multipart/form-data',
             relative: 'route',
         })
+    }
+
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
     }
 
     return (

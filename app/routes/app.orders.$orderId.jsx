@@ -22,13 +22,20 @@ import Loader from "../components/loader";
 import OrderDetailSheet from "../components/orderDetailSheet";
 import CustomBadge from "../components/badge";
 import { STATUS_CODES } from "../helpers/response";
-import { loggedInCheckRedirect } from "../helpers/session.server";
+import { deleteSession } from "../helpers/session.server";
+import NotLoggedInScreen from "../components/notLoggedInScreen";
+// import { loggedInCheckRedirect } from "../helpers/session.server";
 
 export const loader = async ({ request, params }) => {
-	await loggedInCheckRedirect(request)
+	// await loggedInCheckRedirect(request)
 	try {
 		const { admin } = await authenticate.admin(request);
 		let orderId = params.orderId
+
+		const deleteSessionIfNotLogin = await deleteSession(request)
+        if (deleteSessionIfNotLogin) {
+            return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+        }
 
 		const factories = await prisma.factories.findMany();
 		const manufactureStatusInfo = await prisma.manufacturing_status.findMany();
@@ -263,6 +270,12 @@ export default function OrderDetail() {
 			};
 		};
 	}
+
+	if (loadedData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
 
 	return (
 		<>

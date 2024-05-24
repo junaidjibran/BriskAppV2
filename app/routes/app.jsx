@@ -1,18 +1,18 @@
 import { json } from "@remix-run/node";
-import { Form, Link, Outlet, useLoaderData, useRouteError, useSubmit } from "@remix-run/react";
+import { Link, Outlet, useLoaderData, useRouteError, useSubmit } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
-import { loggedInCheckRedirect } from "../helpers/session.server";
+import { loggedInCheck } from "../helpers/session.server";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
 
-  const isLogedIn = await loggedInCheckRedirect(request, false)
+  const isLogedIn = await loggedInCheck(request)
 
   return json({ apiKey: process.env.SHOPIFY_API_KEY || "", isLogedIn: isLogedIn });
 };
@@ -31,27 +31,17 @@ export default function App() {
     });
   }
 
-
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <NavMenu>
-        {/* { isLogedIn && (
-          <> */}
-            {/* <Link to="/app" rel="home">Home</Link> */}
-            <Link to="/app">Orders</Link>
-            <Link to="/app/vectors">Settings</Link>
-          {/* </>
-        ) } */}
+        <Link to="/app">Orders</Link>
+        <Link to="/app/vectors">Settings</Link>
+        <Link to="/app/manageUsers">Manage Users</Link>
       </NavMenu>
       {
         isLogedIn && (
           <ui-title-bar title="Brisk App">
-            {/* <button variant="primary">
-              Generate a product
-            </button> */}
-            {/* <Form method="post" action="/app/logout"> */}
             <button variant="primary" onClick={logoutHandle}>Logout</button>
-            {/* </Form> */}
           </ui-title-bar>
         )
       }
