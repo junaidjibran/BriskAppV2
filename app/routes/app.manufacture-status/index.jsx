@@ -1,7 +1,6 @@
 import {
     ResourceList,
     ResourceItem,
-    Text,
     Page,
     Button,
     Modal,
