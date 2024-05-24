@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { dataTimeFormat } from "../helpers/dataFormat";
 // import { authCookie } from "../helpers/cookies.server";
 import prisma from "../db.server";
-import { commitSession, destroySession, getSession, loggedInCheck } from "../helpers/session.server";
+import { commitSession, getSession, loggedInCheck } from "../helpers/session.server";
 
 export const action = async ({ request }) => {
     try {
@@ -137,7 +137,6 @@ export const loader = async ({ request }) => {
     try {
         const { session } = await authenticate.admin(request);
         const shop = session?.shop
-        debugger;
 
         const isLoggedIn = await loggedInCheck(request)
         return json({ data: { shop, isLoggedIn } }, { status: STATUS_CODES.OK })
