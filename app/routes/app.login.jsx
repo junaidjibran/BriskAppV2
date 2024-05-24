@@ -6,7 +6,6 @@ import { STATUS_CODES } from "../helpers/response";
 import { Button, Card, FormLayout, Page, TextField } from "@shopify/polaris";
 import { useCallback, useEffect, useState } from "react";
 import { dataTimeFormat } from "../helpers/dataFormat";
-// import { authCookie } from "../helpers/cookies.server";
 import prisma from "../db.server";
 import { commitSession, getSession, loggedInCheck } from "../helpers/session.server";
 

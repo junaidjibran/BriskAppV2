@@ -2,7 +2,6 @@ import { json, redirect } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import { login } from "../../shopify.server";
 import styles from "./styles.module.css";
-// import { destroySession, getSession } from "../../helpers/session.server";
 
 export const loader = async ({ request }) => {
   const url = new URL(request.url);
@@ -11,26 +10,12 @@ export const loader = async ({ request }) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  // const session = await getSession(
-  //   request.headers.get("Cookie")
-  // );
-  // const isLogedIn = session.has("customToken")
-
-
-  // if (!isLogedIn) {
-  //   throw redirect("/app/login", {
-  //     headers: {
-  //       "Set-Cookie": await destroySession(session),
-  //     },
-  //   })
-  // }
-
   return json({ showForm: Boolean(login) });
 };
 
 export default function App() {
   const { showForm } = useLoaderData();
-  console.log("showForm", showForm)
+  console.log("_index.jsx". showForm)
 
   return (
     <div className={styles.index}>
