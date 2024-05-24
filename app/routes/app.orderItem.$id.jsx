@@ -1,6 +1,6 @@
 import prisma from '../db.server';
 import { authenticate } from "../shopify.server";
-import { useParams, useLoaderData, useActionData, useNavigation, useSubmit } from '@remix-run/react';
+import { useLoaderData, useActionData, useNavigation, useSubmit } from '@remix-run/react';
 import {
 	Page,
 	Card,
