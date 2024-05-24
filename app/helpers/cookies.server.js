@@ -1,10 +1,10 @@
 import { createCookie } from "@remix-run/node";
 
-export const authCookie = createCookie("ba_token", {
-    // domain: ".shopify.com",
+export const authCookie = createCookie("app_login_token", {
+    domain: "",
     httpOnly: true,
     path: "/",
     sameSite: "none",
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 60 * 60 * 24 * 30 // 30 Days
 })

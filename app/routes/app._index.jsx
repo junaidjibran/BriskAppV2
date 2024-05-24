@@ -19,9 +19,13 @@ import CustomBadge from "../components/badge";
 import { hasNextPage, hasPreviousPage } from "../controllers/paginationController";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
+import { loggedInCheckRedirect } from "../helpers/session.server";
 
 export const loader = async ({ request, params }) => {
+    await loggedInCheckRedirect(request)
     try {
+
+        // if user is not logedIn it redirects to login page
         const { admin, session } = await authenticate.admin(request);
         const shop = session?.shop
 
@@ -123,12 +127,11 @@ export const loader = async ({ request, params }) => {
                 }
             }
         )
-        // jsonLogs(shopifyOrdersResp, "shopify order resppppppp--------")
         const shopifyOrdersData = await shopifyOrdersResp.json()
         // }
         // jsonLogs(shopifyOrdersData, "Shopify order slist--------------")
 
-        // console.log("shopifyOrdersData------------------", JSON.stringify(shopifyOrdersData, null, 4))
+        console.log("shopifyOrdersData------------------", JSON.stringify(shopifyOrdersData, null, 4))
         let updatedOrders = getOrderCall.map(item => {
             let matchFactory = getFactories.find(factoryID => factoryID.id === item.factory);
             let matchingItem = shopifyOrdersData?.data?.nodes?.find(order => order?.id?.split('/').pop() === item.shopify_order_id);

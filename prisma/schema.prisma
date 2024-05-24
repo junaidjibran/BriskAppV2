@@ -87,7 +87,7 @@ model order_tag_logs {
 
 model users {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  token        String
+  token        String    @unique
   email        String    @unique
   username     String
   access       String[]

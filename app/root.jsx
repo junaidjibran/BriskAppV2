@@ -4,26 +4,49 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  json,
+  // json,
+  // redirect,
+  // json,
+  // redirect,
   useLoaderData,
 } from "@remix-run/react";
-import { STATUS_CODES } from "./helpers/response";
-import { authenticate } from "./shopify.server";
-import { authCookie } from "./helpers/cookies.server";
+// import { STATUS_CODES } from "./helpers/response";
+// import { destroySession, getSession } from "./helpers/session.server";
+// import { authenticate } from "./shopify.server";
+// import { authCookie } from "./helpers/cookies.server";
 
-export const loader = async ({ request }) => {
-  try {
-    const { session } = await authenticate.admin(request);
-    const shop = session?.shop
-    const cookieString = request.headers.get("Cookie");
-    const customerAccessToken = await authCookie.parse(cookieString)
+// export const loader = async ({ request }) => {
+//   // try {
+//     // const { session } = await authenticate.admin(request);
+//     // const shop = session?.shop
+//     // const cookieString = request.headers.get("Cookie");
+//     // const customerAccessToken = await authCookie.parse(cookieString)
 
-    return json({ data: { shop, customerAccessToken, page: 'Root' } }, { status: STATUS_CODES.OK })
-  } catch (error) {
-    console.error("Loader Error:", error);
-    return json({ error: JSON.stringify(error), status: "error" }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
-  }
-}
+//     // if (!customerAccessToken)
+//       // return redirect('/app/login')
+
+//     const session = await getSession(
+//       request.headers.get("Cookie")
+//     );
+//     const isLogedIn = session.has("customToken")
+
+//     console.log("Root Sesion", isLogedIn)
+  
+  
+//     // if (!isLogedIn) {
+//     //   throw redirect("/app/login", {
+//     //     headers: {
+//     //       "Set-Cookie": await destroySession(session),
+//     //     },
+//     //   })
+//     // }
+
+//     return json({ page: 'Root' }, { status: STATUS_CODES.OK })
+//   // } catch (error) {
+//   //   console.error("Loader Error:", error);
+//   //   return json({ error: JSON.stringify(error), status: "error" }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+//   // }
+// }
 
 export default function App() {
   const loaderData = useLoaderData()

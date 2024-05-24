@@ -22,8 +22,10 @@ import Loader from "../components/loader";
 import OrderDetailSheet from "../components/orderDetailSheet";
 import CustomBadge from "../components/badge";
 import { STATUS_CODES } from "../helpers/response";
+import { loggedInCheckRedirect } from "../helpers/session.server";
 
 export const loader = async ({ request, params }) => {
+	await loggedInCheckRedirect(request)
 	try {
 		const { admin } = await authenticate.admin(request);
 		let orderId = params.orderId

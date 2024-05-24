@@ -10,6 +10,7 @@ import { prismaGetVector, prismaCreateVector, prismaUpdateVector, prismaDeleteVe
 
 import SettingsNav from "../../components/settingsNav";
 import Loader from "../../components/loader";
+import { loggedInCheckRedirect } from "../../helpers/session.server";
 
 export async function action({ request }) {
     const formData = await request.formData();
@@ -86,7 +87,8 @@ export async function action({ request }) {
     // let resp = await fileUpload(imgCdn, request)  
 }
 
-export async function loader() {
+export async function loader({ request }) {
+    await loggedInCheckRedirect(request)
     return { data: await prismaGetVector() };
 }
 

@@ -23,8 +23,10 @@ import prisma from '../../db.server';
 import SettingsNav from '../../components/settingsNav';
 import Loader from "../../components/loader";
 import CustomBadge from '../../components/badge';
+import { loggedInCheckRedirect } from '../../helpers/session.server';
 
-export async function loader() {
+export async function loader({ request }) {
+    await loggedInCheckRedirect(request)
     // @ts-ignore
     const statuses = await prisma.manufacturing_status.findMany();
     return json(statuses)

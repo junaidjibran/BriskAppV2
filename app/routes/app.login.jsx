@@ -1,13 +1,14 @@
 import { authenticate, unauthenticated } from "../shopify.server";
-import { json, redirect } from "@remix-run/node";
-import { Form, useActionData, useLoaderData, useSubmit } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import { Form, redirect, useActionData, useLoaderData, useNavigate, useNavigation, useSubmit } from "@remix-run/react";
 
 import { STATUS_CODES } from "../helpers/response";
 import { Button, Card, FormLayout, Page, TextField } from "@shopify/polaris";
 import { useCallback, useEffect, useState } from "react";
 import { dataTimeFormat } from "../helpers/dataFormat";
-import { authCookie } from "../helpers/cookies.server";
+// import { authCookie } from "../helpers/cookies.server";
 import prisma from "../db.server";
+import { commitSession, destroySession, getSession, loggedInCheck } from "../helpers/session.server";
 
 export const action = async ({ request }) => {
     try {
@@ -85,9 +86,11 @@ export const action = async ({ request }) => {
 
         const checkInDB = await prisma.users.findUnique({
             where: {
-				email: getCustomerInfoData?.data?.customer?.email
-			}
+                email: getCustomerInfoData?.data?.customer?.email
+            }
         })
+
+        console.log("checkInDB", JSON.stringify(checkInDB, null, 4))
 
         if (checkInDB) {
             const userUpdate = await prisma.users.update({
@@ -100,41 +103,47 @@ export const action = async ({ request }) => {
             })
 
             console.log("userUpdate", JSON.stringify(userUpdate, null, 4))
+            // return json({ data: { shop, userData: userUpdate, status: "success" } }, { status: STATUS_CODES.OK })
+        } else {
+            const userCreate = await prisma.users.create({
+                data: {
+                    email: getCustomerInfoData?.data?.customer?.email,
+                    username: getCustomerInfoData?.data?.customer?.displayName,
+                    token: customerAccessToken?.customerAccessToken?.accessToken,
+                    access: [],
+                    expire_at: customerAccessToken?.customerAccessToken?.expiresAt
+                }
+            })
+
+            console.log("userCreate", JSON.stringify(userCreate, null, 4))
+            // return json({ data: { shop, userData: userCreate, status: "success" } }, { status: STATUS_CODES.OK })
         }
 
-        const userCreate = await prisma.users.create({
-            data: {
-                email: getCustomerInfoData?.data?.customer?.email,
-                username: getCustomerInfoData?.data?.customer?.displayName,
-                token: customerAccessToken?.customerAccessToken?.accessToken,
-                access: [],
-                expire_at: customerAccessToken?.customerAccessToken?.expiresAt
-            }
-        })
+        const customSession = await getSession(request.headers.get("Cookie"));
 
-        console.log("userCreate", JSON.stringify(userCreate, null, 4))
-
+        customSession.set('customToken', customerAccessToken?.customerAccessToken?.accessToken)
 
         return redirect('/app', {
             headers: {
-                "Set-Cookie": authCookie.serialize(customerAccessToken?.customerAccessToken?.accessToken)
-            }
-        })
-        // return json({ data: { shop, customerAccessToken } }, { status: STATUS_CODES.OK })
+                "Set-Cookie": await commitSession(customSession)
+            },
+        });
     } catch (error) {
         console.error("Loader Error:", error);
-        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+        return json({ error: JSON.stringify(error), message: "Something went wrong...", status: "error" }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
 }
 export const loader = async ({ request }) => {
     try {
         const { session } = await authenticate.admin(request);
         const shop = session?.shop
+        debugger;
 
-        return json({ data: { shop } }, { status: STATUS_CODES.OK })
+        const isLoggedIn = await loggedInCheck(request)
+        return json({ data: { shop, isLoggedIn } }, { status: STATUS_CODES.OK })
     } catch (error) {
         console.error("Loader Error:", error);
-        return json({ error: JSON.stringify(error), status: "error" }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+        return json({ error: JSON.stringify(error), status: "error", message: "Something went wrong..." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
 };
 
@@ -142,6 +151,11 @@ export default function Login({ params }) {
     const loadedData = useLoaderData();
     const actionData = useActionData();
     const submit = useSubmit();
+    const nav = useNavigation();
+    const navigate = useNavigate()
+
+    const isLoading = ["submitting"].includes(nav.state) && ["POST"].includes(nav.formMethod);
+
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -166,6 +180,19 @@ export default function Login({ params }) {
     }
 
     useEffect(() => {
+        if (loadedData?.data?.isLoggedIn) {
+            navigate('/app')   
+        }
+
+        if (loadedData && loadedData?.status?.length) {
+            if (loadedData?.status === 'error') {
+                shopify.toast.show(loadedData?.message, { isError: true });
+            }
+        }
+    }, [loadedData])
+    
+
+    useEffect(() => {
         if (actionData && actionData?.status?.length) {
             if (actionData?.status === 'error') {
                 shopify.toast.show(actionData?.message, { isError: true });
@@ -173,8 +200,7 @@ export default function Login({ params }) {
 
             if (actionData?.status === 'success') {
                 shopify.toast.show(actionData?.message, { isError: false });
-
-                // setOrderIDs('')
+                // localStorage.setItem("userInfo", actionData?.data?.userData)
             }
         }
     }, [actionData])
@@ -206,7 +232,7 @@ export default function Login({ params }) {
                                     placeholder="••••••••"
                                     autoComplete="off"
                                 />
-                                <Button variant="primary" submit>Log in</Button>
+                                <Button variant="primary" loading={isLoading} submit>Log in</Button>
                             </FormLayout>
                         </Form>
                     </Card>

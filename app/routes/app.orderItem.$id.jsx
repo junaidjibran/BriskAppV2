@@ -30,8 +30,10 @@ import { prismaCreateNote, prismaDeleteNote, prismaUpdateNote } from '../control
 import { DeleteIcon, EditIcon } from '@shopify/polaris-icons';
 import { STATUS_CODES } from '../helpers/response';
 import { jsonLogs } from '../helpers/logs';
+import { loggedInCheckRedirect } from '../helpers/session.server';
 
 export const loader = async ({ request, params }) => {
+	await loggedInCheckRedirect(request)
 	try {
 		if (!params.id) {
 			return json({ error: "parems: Order id or lineItem id not found" }, { status: STATUS_CODES.BAD_REQUEST })

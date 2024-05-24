@@ -18,9 +18,11 @@ import { fetchProductQuery } from '../queries/productQueries.js'
 import { useEffect, useState,  useCallback } from "react";
 import { hasNextPage, hasPreviousPage } from "../controllers/shopshirt_controller";
 import Loader from "../components/loader";
+import { loggedInCheckRedirect } from "../helpers/session.server.js";
 
 
 export async function loader({ request }) {
+    await loggedInCheckRedirect(request)
     const { admin, session } = await authenticate.admin(request);
     if (!admin) {
         return json({ err: 'Not authenticated' })

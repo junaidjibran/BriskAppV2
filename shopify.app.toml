@@ -3,7 +3,7 @@
 client_id = "c033f5a0858d3da8f3156544fe5209a9"
 name = "Brisk App"
 handle = "brisk-app-2"
-application_url = "https://packages-professionals-leaving-consensus.trycloudflare.com"
+application_url = "https://oasis-reviewer-authorities-angry.trycloudflare.com"
 embedded = true
 
 [build]
@@ -16,9 +16,9 @@ scopes = "read_checkout_branding_settings,read_customers,read_files,read_orders,
 
 [auth]
 redirect_urls = [
-  "https://packages-professionals-leaving-consensus.trycloudflare.com/auth/callback",
-  "https://packages-professionals-leaving-consensus.trycloudflare.com/auth/shopify/callback",
-  "https://packages-professionals-leaving-consensus.trycloudflare.com/api/auth/callback"
+  "https://oasis-reviewer-authorities-angry.trycloudflare.com/auth/callback",
+  "https://oasis-reviewer-authorities-angry.trycloudflare.com/auth/shopify/callback",
+  "https://oasis-reviewer-authorities-angry.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

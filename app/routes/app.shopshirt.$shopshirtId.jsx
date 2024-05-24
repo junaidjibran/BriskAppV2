@@ -12,8 +12,10 @@ import {
   } from "@remix-run/react";
 import {fetchProductQuery} from '../queries/productQueries.js'
 import Loader from '../components/loader';
+import { loggedInCheckRedirect } from "../helpers/session.server.js";
 
 export async function loader({request, params}) {
+    await loggedInCheckRedirect(request)
     const { admin, session } = await authenticate.admin(request);
     if(!admin){
         return json({err: 'Not authenticated'})
