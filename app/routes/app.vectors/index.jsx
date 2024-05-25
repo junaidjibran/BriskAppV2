@@ -10,8 +10,10 @@ import { prismaGetVector, prismaCreateVector, prismaUpdateVector, prismaDeleteVe
 
 import SettingsNav from "../../components/settingsNav";
 import Loader from "../../components/loader";
-import { deleteSession } from "../../helpers/session.server";
 import NotLoggedInScreen from "../../components/notLoggedInScreen";
+import { authenticate } from "../../shopify.server";
+import { loggedInCheck } from "../../controllers/users.controller";
+import { STATUS_CODES } from "../../helpers/response";
 
 export async function action({ request }) {
     const formData = await request.formData();
@@ -89,12 +91,19 @@ export async function action({ request }) {
 }
 
 export async function loader({ request }) {
-    // await loggedInCheckRedirect(request)
-    const deleteSessionIfNotLogin = await deleteSession(request)
-    if (deleteSessionIfNotLogin) {
-        return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+    try {
+        const { sessionToken } = await authenticate.admin(request);
+
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+
+        return json({ data: await prismaGetVector() });
+        
+    } catch (error) {
+        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
-    return { data: await prismaGetVector() };
 }
 
 export default function Vectors() {

@@ -43,13 +43,13 @@ model factories {
 }
 
 model shopify_orders {
-  id               String @id @default(auto()) @map("_id") @db.ObjectId
-  shopify_order_id String @unique
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  shopify_order_id String   @unique
   order_name       String
   factory          String?
   line_items       Json[]
   shop             String
-  created_at       DateTime      
+  created_at       DateTime
 }
 
 model shop_shirt {
@@ -86,15 +86,16 @@ model order_tag_logs {
 }
 
 model users {
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  token        String    @unique
-  email        String   @unique
-  username     String
-  is_admin     Boolean   @default(false)
-  access       String[]
-  expire_at    DateTime
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  email         String   @unique
+  password      String
+  session_token String?
+  username      String
+  is_loggedin   Boolean  @default(false)
+  is_admin      Boolean  @default(false)
+  access        String[]
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 }
 
 enum VectorType {

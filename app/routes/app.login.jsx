@@ -1,132 +1,58 @@
-import { authenticate, unauthenticated } from "../shopify.server";
-import { json } from "@remix-run/node";
-import { Form, redirect, useActionData, useLoaderData, useNavigate, useNavigation, useSubmit } from "@remix-run/react";
-
+import { authenticate } from "../shopify.server";
+import { json, redirect } from "@remix-run/node";
+import { Form, useActionData, useLoaderData, useNavigate, useNavigation, useSubmit } from "@remix-run/react";
 import { STATUS_CODES } from "../helpers/response";
 import { Button, Card, FormLayout, Page, TextField } from "@shopify/polaris";
 import { useCallback, useEffect, useState } from "react";
-import { dataTimeFormat } from "../helpers/dataFormat";
 import prisma from "../db.server";
-import { commitSession, getSession, loggedInCheck } from "../helpers/session.server";
+import { loggedInCheck } from "../controllers/users.controller";
 
 export const action = async ({ request }) => {
     try {
-        const { session } = await authenticate.admin(request);
-        const shop = session?.shop
-        const { storefront } = await unauthenticated.storefront(shop);
+        const { sessionToken } = await authenticate.admin(request);
 
         const formData = await request.formData();
         const email = formData.get('email');
         const password = formData.get('password');
-        // const { storefront } = await authenticate.storefront(shop)
 
         if (!email || !password) {
             return json({ status: "error", message: "Email or Password missing!" }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
-        const response = await storefront.graphql(`#graphql
-            mutation customerAccessTokenCreate($input: CustomerAccessTokenCreateInput!) {
-                customerAccessTokenCreate(input: $input) {
-                    customerAccessToken {
-                        accessToken
-                        expiresAt
-                    }
-                    customerUserErrors {
-                        code
-                        field
-                        message
-                    }
-                    userErrors {
-                        field
-                        message
-                    }
-                }
-            }`,
-            {
-                variables: {
-                    input: {
-                        "email": email,
-                        "password": password
-                    }
-                }
-            }
-        );
-
-        const data = await response.json();
-
-        console.log("data-------------", JSON.stringify(data, null, 4))
-        const customerAccessToken = data?.data?.customerAccessTokenCreate ?? null
-
-        if (customerAccessToken?.customerUserErrors?.length) {
-            return json({ status: 'error', message: customerAccessToken?.customerUserErrors[0].message, messages: customerAccessToken?.customerUserErrors }, { status: STATUS_CODES.UNAUTHORIZED })
-        }
-
-        console.log("customerAccessToken?.customerAccessToken?.accessToken", customerAccessToken?.customerAccessToken?.accessToken)
-
-        const getCustomerInfoResp = await storefront.graphql(`#graphql
-            query getCustomer($token: String!)  {
-                customer(customerAccessToken: $token) {
-                    createdAt
-                    email
-                    displayName
-                }
-            }
-        `, {
-            variables: {
-                "token": customerAccessToken?.customerAccessToken?.accessToken
-            }
-        })
-
-        console.log(dataTimeFormat(customerAccessToken?.customerAccessToken?.expiresAt))
-
-        const getCustomerInfoData = await getCustomerInfoResp.json();
-
-        console.log("getCustomerInfoData", JSON.stringify(getCustomerInfoData, null, 4));
-
-        const checkInDB = await prisma.users.findUnique({
+        const findUser = await prisma.users.findUnique({
             where: {
-                email: getCustomerInfoData?.data?.customer?.email
+                email: email
             }
         })
 
-        console.log("checkInDB", JSON.stringify(checkInDB, null, 4))
-
-        if (checkInDB) {
-            const userUpdate = await prisma.users.update({
-                where: {
-                    email: getCustomerInfoData?.data?.customer?.email
-                },
-                data: {
-                    token: customerAccessToken?.customerAccessToken?.accessToken
-                }
-            })
-
-            console.log("userUpdate", JSON.stringify(userUpdate, null, 4))
-            // return json({ data: { shop, userData: userUpdate, status: "success" } }, { status: STATUS_CODES.OK })
-        } else {
-            const userCreate = await prisma.users.create({
-                data: {
-                    email: getCustomerInfoData?.data?.customer?.email,
-                    username: getCustomerInfoData?.data?.customer?.displayName,
-                    token: customerAccessToken?.customerAccessToken?.accessToken,
-                    access: [],
-                    expire_at: customerAccessToken?.customerAccessToken?.expiresAt
-                }
-            })
-
-            console.log("userCreate", JSON.stringify(userCreate, null, 4))
-            // return json({ data: { shop, userData: userCreate, status: "success" } }, { status: STATUS_CODES.OK })
+        console.log("findUser", JSON.stringify(findUser, null, 4))
+        
+        if (!findUser) {
+            console.log()
+            return json({ status: "error", message: "User not found!" }, { status: STATUS_CODES.NOT_FOUND })
         }
 
-        const customSession = await getSession(request.headers.get("Cookie"));
+        const isValidPassword = findUser?.password === password;
 
-        customSession.set('customToken', customerAccessToken?.customerAccessToken?.accessToken)
+        if (!isValidPassword) {
+            return json({ status: "error", message: "Please Enter valid password" }, { status: STATUS_CODES.NOT_FOUND })
+        }
 
-        return redirect('/app', {
-            headers: {
-                "Set-Cookie": await commitSession(customSession)
+        const updateUserSessionToken = await prisma.users.update({
+            where: {
+                email: email
             },
-        });
+            data: {
+                session_token: sessionToken?.sid
+            }
+        })
+
+        if (!updateUserSessionToken) {
+            return json({ status: "error", message: "Session update issue!" }, { status: STATUS_CODES.BAD_REQUEST })
+        }
+
+        return redirect('/app');
+        // return json({ data: { findUser }, status: "success", message: "Login Success!" }, { status: STATUS_CODES.OK })
     } catch (error) {
         console.error("Loader Error:", error);
         return json({ error: JSON.stringify(error), message: "Something went wrong...", status: "error" }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
@@ -134,10 +60,15 @@ export const action = async ({ request }) => {
 }
 export const loader = async ({ request }) => {
     try {
-        const { session } = await authenticate.admin(request);
+        const { session, sessionToken } = await authenticate.admin(request);
+        // const abc = await authenticate.admin(request);
         const shop = session?.shop
 
-        const isLoggedIn = await loggedInCheck(request)
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+
+        console.log("session==================================", sessionToken)
+
+        // const isLoggedIn = await loggedInCheck(request)
         return json({ data: { shop, isLoggedIn } }, { status: STATUS_CODES.OK })
     } catch (error) {
         console.error("Loader Error:", error);

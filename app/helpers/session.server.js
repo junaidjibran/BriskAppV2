@@ -1,8 +1,8 @@
 // app/sessions.ts
-import { createCookieSessionStorage, redirect } from "@remix-run/node"; // or cloudflare/deno
+import { createMemorySessionStorage, redirect } from "@remix-run/node"; // or cloudflare/deno
 
 
-const { getSession, commitSession, destroySession } = createCookieSessionStorage(
+const { getSession, commitSession, destroySession } = createMemorySessionStorage(
     {
         // a Cookie from `createCookie` or the CookieOptions to create one
         cookie: {
@@ -18,7 +18,7 @@ const { getSession, commitSession, destroySession } = createCookieSessionStorage
             maxAge: 60 * 60 * 24 * 30, // 30 Days
             path: "/",
             sameSite: "none",
-            secrets: ["s3cret1"],
+            secrets: [],
             secure: true,
         },
     }

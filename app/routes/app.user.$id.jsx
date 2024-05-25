@@ -2,21 +2,23 @@ import { json, useActionData, useLoaderData, useNavigation, useSubmit } from "@r
 import { Badge, Button, Card, Checkbox,  Divider, Page, Text } from "@shopify/polaris"
 import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
-import { getUser, updateUser } from "../controllers/users.controller"
+import { getUser, loggedInCheck, updateUser } from "../controllers/users.controller"
 import Loader from "../components/loader"
 import { userScopes } from "../constants/scopes"
-import { deleteSession } from "../helpers/session.server"
 import NotLoggedInScreen from "../components/notLoggedInScreen"
+import { authenticate } from "../shopify.server"
 
 export const loader = async ({ request, params }) => {
     try {
-        const userID = params.id
-
-        const deleteSessionIfNotLogin = await deleteSession(request)
-        if (deleteSessionIfNotLogin) {
-            return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+        const { sessionToken } = await authenticate.admin(request);
+        
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
 
+        const userID = params.id
+        
         if (!userID) {
             return json({ status: "error", message: "User not found" }, { status: STATUS_CODES.BAD_REQUEST })
         }

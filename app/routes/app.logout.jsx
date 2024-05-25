@@ -1,27 +1,26 @@
 import { json } from "@remix-run/node";
-import { redirect } from "@remix-run/react";
 
 import { STATUS_CODES } from "../helpers/response";
-import { destroySession, getSession } from "../helpers/session.server";
+import { authenticate } from "../shopify.server";
+import { userLogout } from "../controllers/users.controller";
 
 export const action = async ({ request }) => {
-    try {
-        const customSession = await getSession(request.headers.get("Cookie"));
-        console.log("customSession", customSession)
-          return redirect("/app/login", {
-            headers: {
-              "Set-Cookie": await destroySession(customSession),
-            },
-        });
+  try {
+    const { sessionToken } = await authenticate.admin(request);
 
-        // return redirect('/app', {
-        //     headers: {
-        //         "Set-Cookie": await authCookie.serialize(customerAccessToken?.customerAccessToken?.accessToken)
-        //     }
-        // })
+    const isLogout = await userLogout({ sessionToken });
 
-    } catch (error) {
-        console.error("Loader Error:", error);
-        return json({ error: JSON.stringify(error), message: "Something went wrong...", status: "error" }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+    if (!isLogout) {
+      return json({ message: "There is an issue while logout", status: "error" }, { status: STATUS_CODES.BAD_REQUEST });
     }
+
+    if (isLogout && isLogout?.session_token === sessionToken?.sid) {
+      return json({ message: "You are not logged out", status: "error" }, { status: STATUS_CODES.BAD_REQUEST });
+    }
+
+    return json({ message: "Logout Success.", status: "success" }, { status: STATUS_CODES.ACCEPTED });
+  } catch (error) {
+    console.error("Loader Error:", error);
+    return json({ error: JSON.stringify(error), message: "Something went wrong...", status: "error" }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+  }
 }

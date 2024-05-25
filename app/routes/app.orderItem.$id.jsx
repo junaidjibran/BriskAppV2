@@ -30,17 +30,16 @@ import { prismaCreateNote, prismaDeleteNote, prismaUpdateNote } from '../control
 import { DeleteIcon, EditIcon } from '@shopify/polaris-icons';
 import { STATUS_CODES } from '../helpers/response';
 import { jsonLogs } from '../helpers/logs';
-import { deleteSession } from '../helpers/session.server';
 import NotLoggedInScreen from '../components/notLoggedInScreen';
-// import { loggedInCheckRedirect } from '../helpers/session.server';
+import { loggedInCheck } from '../controllers/users.controller';
 
 export const loader = async ({ request, params }) => {
-	// await loggedInCheckRedirect(request)
 	try {
+		const { sessionToken } = await authenticate.admin(request)
 
-		const deleteSessionIfNotLogin = await deleteSession(request)
-        if (deleteSessionIfNotLogin) {
-            return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+		const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
 
 		if (!params.id) {

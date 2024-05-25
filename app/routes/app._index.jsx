@@ -6,7 +6,6 @@ import {
     Page,
     Button,
     Filters,
-    EmptyState,
 } from "@shopify/polaris";
 import prisma from "../db.server";
 import { json } from "@remix-run/node";
@@ -20,18 +19,18 @@ import CustomBadge from "../components/badge";
 import { hasNextPage, hasPreviousPage } from "../controllers/paginationController";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
-import { deleteSession } from "../helpers/session.server";
 import NotLoggedInScreen from "../components/notLoggedInScreen";
+import { loggedInCheck } from "../controllers/users.controller";
 
 export const loader = async ({ request, params }) => {
     try {
-        const { admin, session } = await authenticate.admin(request);
+        const { admin, session, sessionToken } = await authenticate.admin(request);
         // if user is not logedIn it redirects to login page
         const shop = session?.shop
 
-        const deleteSessionIfNotLogin = await deleteSession(request)
-        if (deleteSessionIfNotLogin) {
-            return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
 
         const url = new URL(request.url);
@@ -174,7 +173,7 @@ export const loader = async ({ request, params }) => {
             };
         });
         
-        return json({ data: { orders: updatedOrders, pageInfo: pagination } }, { status: STATUS_CODES.OK })
+        return json({ data: { orders: updatedOrders, pageInfo: pagination, scopes: isLoggedIn?.access } }, { status: STATUS_CODES.OK })
     } catch (error) {
         console.error("Loader Error:", error);
         return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });

@@ -3,18 +3,20 @@ import { Badge, Card, Page, ResourceItem, ResourceList, Text } from "@shopify/po
 import { EditIcon } from "@shopify/polaris-icons"
 import { useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
-import { getUsers } from "../controllers/users.controller"
+import { getUsers, loggedInCheck } from "../controllers/users.controller"
 import Loader from "../components/loader"
 import NotLoggedInScreen from "../components/notLoggedInScreen"
-import { deleteSession } from "../helpers/session.server"
+import { authenticate } from "../shopify.server"
 
 export const loader = async ({ request }) => {
     try {
         const users = await getUsers();
 
-        const deleteSessionIfNotLogin = await deleteSession(request)
-        if (deleteSessionIfNotLogin) {
-            return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+        const { sessionToken } = await authenticate.admin(request);
+        
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
 
         if (!users) {

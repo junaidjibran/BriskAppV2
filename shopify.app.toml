@@ -3,22 +3,23 @@
 client_id = "c033f5a0858d3da8f3156544fe5209a9"
 name = "Brisk App"
 handle = "brisk-app-2"
-application_url = "https://oasis-reviewer-authorities-angry.trycloudflare.com"
+application_url = "https://survival-lows-pants-condition.trycloudflare.com"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
 dev_store_url = "checkout-testing-app.myshopify.com"
+include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_checkout_branding_settings,read_customers,read_files,read_orders,read_payment_customizations,read_products,write_checkout_branding_settings,write_files,write_orders,write_payment_customizations,write_products"
+scopes = "read_checkout_branding_settings,read_customers,read_delivery_customizations,read_orders,read_payment_customizations,unauthenticated_read_customer_tags,unauthenticated_read_customers,unauthenticated_write_customers,write_checkout_branding_settings,write_delivery_customizations,write_files,write_payment_customizations,write_products"
 
 [auth]
 redirect_urls = [
-  "https://oasis-reviewer-authorities-angry.trycloudflare.com/auth/callback",
-  "https://oasis-reviewer-authorities-angry.trycloudflare.com/auth/shopify/callback",
-  "https://oasis-reviewer-authorities-angry.trycloudflare.com/api/auth/callback"
+  "https://survival-lows-pants-condition.trycloudflare.com/auth/callback",
+  "https://survival-lows-pants-condition.trycloudflare.com/auth/shopify/callback",
+  "https://survival-lows-pants-condition.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
