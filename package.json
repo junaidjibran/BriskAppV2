@@ -2,7 +2,7 @@
   "name": "brisk-app-v2",
   "private": true,
   "scripts": {
-    "build": "remix vite:build",
+    "build": "vite build && vite build --ssr",
     "dev": "shopify app dev",
     "predev": "prisma generate && prisma db push",
     "config:link": "shopify app config link",
