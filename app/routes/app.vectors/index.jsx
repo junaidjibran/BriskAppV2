@@ -10,6 +10,10 @@ import { prismaGetVector, prismaCreateVector, prismaUpdateVector, prismaDeleteVe
 
 import SettingsNav from "../../components/settingsNav";
 import Loader from "../../components/loader";
+import NotLoggedInScreen from "../../components/notLoggedInScreen";
+import { authenticate } from "../../shopify.server";
+import { loggedInCheck } from "../../controllers/users.controller";
+import { STATUS_CODES } from "../../helpers/response";
 
 export async function action({ request }) {
     const formData = await request.formData();
@@ -86,12 +90,25 @@ export async function action({ request }) {
     // let resp = await fileUpload(imgCdn, request)  
 }
 
-export async function loader() {
-    return { data: await prismaGetVector() };
+export async function loader({ request }) {
+    try {
+        const { sessionToken } = await authenticate.admin(request);
+
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+
+        return json({ data: await prismaGetVector() });
+        
+    } catch (error) {
+        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+    }
 }
 
 export default function Vectors() {
-    const loadData = useLoaderData();
+    // const loadData = useLoaderData();
+    const loadedData = useLoaderData();
     const actionData = useActionData();
     const submit = useSubmit();
     const nav = useNavigation();
@@ -101,10 +118,10 @@ export default function Vectors() {
 
     const isLoading = ["loading", "submitting"].includes(nav.state) && nav.formMethod === "POST";
 
-    console.log('loadedData', loadData)
+    console.log('loadedData', loadedData)
     console.log('actionData', actionData)
 
-    const loadedData = useLoaderData();
+    
     const validImageTypes = ['image/gif', 'image/jpeg', 'image/png'];
     // @ts-ignore
     const [vectorsList, setVectorsList] = useState([])
@@ -162,7 +179,7 @@ export default function Vectors() {
     useEffect(() => {
         console.log('ComponentMount--------', loadedData)
         if (loadedData) {
-            setVectorsList(loadedData.data)
+            setVectorsList(loadedData?.data)
         }
     }, [loadedData])
 
@@ -387,6 +404,13 @@ export default function Vectors() {
             return ""
         }
     }
+
+    if (loadedData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
+
 
     return (
         <>

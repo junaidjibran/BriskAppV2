@@ -19,11 +19,19 @@ import CustomBadge from "../components/badge";
 import { hasNextPage, hasPreviousPage } from "../controllers/paginationController";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
+import NotLoggedInScreen from "../components/notLoggedInScreen";
+import { loggedInCheck } from "../controllers/users.controller";
 
 export const loader = async ({ request, params }) => {
     try {
-        const { admin, session } = await authenticate.admin(request);
+        const { admin, session, sessionToken } = await authenticate.admin(request);
+        // if user is not logedIn it redirects to login page
         const shop = session?.shop
+
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
 
         const url = new URL(request.url);
         const cursorParam = url.searchParams.get("cursor");
@@ -123,12 +131,11 @@ export const loader = async ({ request, params }) => {
                 }
             }
         )
-        // jsonLogs(shopifyOrdersResp, "shopify order resppppppp--------")
         const shopifyOrdersData = await shopifyOrdersResp.json()
         // }
         // jsonLogs(shopifyOrdersData, "Shopify order slist--------------")
 
-        // console.log("shopifyOrdersData------------------", JSON.stringify(shopifyOrdersData, null, 4))
+        console.log("shopifyOrdersData------------------", JSON.stringify(shopifyOrdersData, null, 4))
         let updatedOrders = getOrderCall.map(item => {
             let matchFactory = getFactories.find(factoryID => factoryID.id === item.factory);
             let matchingItem = shopifyOrdersData?.data?.nodes?.find(order => order?.id?.split('/').pop() === item.shopify_order_id);
@@ -166,7 +173,7 @@ export const loader = async ({ request, params }) => {
             };
         });
         
-        return json({ data: { orders: updatedOrders, pageInfo: pagination } }, { status: STATUS_CODES.OK })
+        return json({ data: { orders: updatedOrders, pageInfo: pagination, scopes: isLoggedIn?.access } }, { status: STATUS_CODES.OK })
     } catch (error) {
         console.error("Loader Error:", error);
         return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
@@ -256,6 +263,12 @@ export default function Orders({ params }) {
             )
         }
     );
+
+    if (loadedData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
 
 
     // const isloading = nav.state === "loading";

@@ -22,11 +22,25 @@ import SettingsNav from '../../components/settingsNav';
 // import Loader from '../components/loader';
 import prisma from '../../db.server';
 import Loader from '../../components/loader';
+import NotLoggedInScreen from '../../components/notLoggedInScreen';
+import { STATUS_CODES } from '../../helpers/response';
+import { loggedInCheck } from '../../controllers/users.controller';
+import { authenticate } from '../../shopify.server';
 
-export async function loader() {
-    // @ts-ignore
-    const statuses = await prisma.factories.findMany();
-    return json(statuses)
+export async function loader({request}) {
+    try {
+        const { sessionToken } = await authenticate.admin(request);
+
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+
+        const statuses = await prisma.factories.findMany();
+        return json(statuses)
+    } catch (error) {
+        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+    }
 }
 
 export async function action({ request }) {
@@ -251,6 +265,14 @@ export default function FactorySetting() {
     }
 
     const handleClearButtonClick = useCallback(() => setTextFieldValue(''), []);
+
+
+    if (data?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
+
     return (
         <>
         {nav.state === 'loading' ? <Loader/> : null}

@@ -10,11 +10,14 @@ export const loader = async ({ request }) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
+  console.log("route _index.js file")
+
   return json({ showForm: Boolean(login) });
 };
 
 export default function App() {
   const { showForm } = useLoaderData();
+  console.log("_index.jsx". showForm)
 
   return (
     <div className={styles.index}>

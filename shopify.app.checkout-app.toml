@@ -1,0 +1,39 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "516e437308288c6e2b2ad42bda0b1693"
+name = "checkout-app"
+handle = "checkout-app-526"
+application_url = "https://impacts-great-electron-refused.trycloudflare.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "checkout-testing-app.myshopify.com"
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_checkout_branding_settings,read_customers,read_delivery_customizations,read_orders,read_payment_customizations,unauthenticated_read_customer_tags,unauthenticated_read_customers,unauthenticated_write_customers,write_checkout_branding_settings,write_delivery_customizations,write_files,write_payment_customizations,write_products"
+
+[auth]
+redirect_urls = [
+  "https://impacts-great-electron-refused.trycloudflare.com/auth/callback",
+  "https://impacts-great-electron-refused.trycloudflare.com/auth/shopify/callback",
+  "https://impacts-great-electron-refused.trycloudflare.com/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2023-10"
+
+  [webhooks.privacy_compliance]
+  customer_deletion_url = "https://ee52-2400-adc5-41f-6a00-b72c-c1ab-3d3d-c039.ngrok-free.app"
+  customer_data_request_url = "https://ee52-2400-adc5-41f-6a00-b72c-c1ab-3d3d-c039.ngrok-free.app"
+  shop_deletion_url = "https://ee52-2400-adc5-41f-6a00-b72c-c1ab-3d3d-c039.ngrok-free.app"
+
+[app_proxy]
+url = "https://impacts-great-electron-refused.trycloudflare.com"
+subpath = "checkout"
+prefix = "apps"
+
+[pos]
+embedded = true

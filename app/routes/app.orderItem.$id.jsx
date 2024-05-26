@@ -1,6 +1,6 @@
 import prisma from '../db.server';
 import { authenticate } from "../shopify.server";
-import { useParams, useLoaderData, useActionData, useNavigation, useSubmit } from '@remix-run/react';
+import { useLoaderData, useActionData, useNavigation, useSubmit } from '@remix-run/react';
 import {
 	Page,
 	Card,
@@ -30,9 +30,18 @@ import { prismaCreateNote, prismaDeleteNote, prismaUpdateNote } from '../control
 import { DeleteIcon, EditIcon } from '@shopify/polaris-icons';
 import { STATUS_CODES } from '../helpers/response';
 import { jsonLogs } from '../helpers/logs';
+import NotLoggedInScreen from '../components/notLoggedInScreen';
+import { loggedInCheck } from '../controllers/users.controller';
 
 export const loader = async ({ request, params }) => {
 	try {
+		const { sessionToken } = await authenticate.admin(request)
+
+		const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+
 		if (!params.id) {
 			return json({ error: "parems: Order id or lineItem id not found" }, { status: STATUS_CODES.BAD_REQUEST })
 			// throw Error('Parems Not found!')
@@ -784,6 +793,12 @@ export default function LineItemDetails() {
 		setEditedNote('');
 		setEditNoteId(null);
 	};
+
+	if (loadedData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
 
 
 	return (

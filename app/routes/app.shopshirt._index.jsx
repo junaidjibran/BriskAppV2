@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { Thumbnail, Modal, Button, Card, Page, ResourceItem, ResourceList, Text, TextField, Icon, InlineStack, EmptyState, ButtonGroup} from "@shopify/polaris" ;
-import { ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon, SearchIcon } from '@shopify/polaris-icons';
+import { Thumbnail, Modal, Button, Card, Page, ResourceItem, ResourceList, Text, EmptyState} from "@shopify/polaris" ;
+import { ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon } from '@shopify/polaris-icons';
 
 import SettingsNav from "../components/settingsNav";
 import { authenticate } from "../shopify.server";
@@ -15,15 +15,21 @@ import {
     useLocation,
 } from "@remix-run/react";
 import { fetchProductQuery } from '../queries/productQueries.js'
-import { useEffect, useState,  useCallback } from "react";
+import { useEffect, useState } from "react";
 import { hasNextPage, hasPreviousPage } from "../controllers/shopshirt_controller";
 import Loader from "../components/loader";
-
+import NotLoggedInScreen from "../components/notLoggedInScreen.jsx";
+import { loggedInCheck } from "../controllers/users.controller.js";
 
 export async function loader({ request }) {
-    const { admin, session } = await authenticate.admin(request);
+    const { admin, session, sessionToken } = await authenticate.admin(request);
     if (!admin) {
         return json({ err: 'Not authenticated' })
+    }
+
+    const isLoggedIn = await loggedInCheck({ sessionToken })
+    if (!isLoggedIn) {
+        return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
     }
 
     const url = new URL(request.url);
@@ -196,6 +202,13 @@ export default function Shopshirt() {
     //         handleSearchButtonClick();
     //     }
     // };
+
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
+
 
     return (
         <>

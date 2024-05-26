@@ -1,7 +1,6 @@
 import {
     ResourceList,
     ResourceItem,
-    Text,
     Page,
     Button,
     Modal,
@@ -23,11 +22,23 @@ import prisma from '../../db.server';
 import SettingsNav from '../../components/settingsNav';
 import Loader from "../../components/loader";
 import CustomBadge from '../../components/badge';
+import { STATUS_CODES } from '../../helpers/response';
+import { authenticate } from '../../shopify.server';
+import { loggedInCheck } from '../../controllers/users.controller';
 
-export async function loader() {
-    // @ts-ignore
-    const statuses = await prisma.manufacturing_status.findMany();
-    return json(statuses)
+export async function loader({ request }) {
+    try {
+        const { sessionToken } = await authenticate.admin(request);
+
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+        const statuses = await prisma.manufacturing_status.findMany();
+        return json(statuses)
+    } catch (error) {
+        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+    }
 }
 
 export async function action({ request }) {

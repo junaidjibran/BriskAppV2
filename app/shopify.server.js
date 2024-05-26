@@ -5,11 +5,8 @@ import {
   DeliveryMethod,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import { MongoDBSessionStorage } from '@shopify/shopify-app-session-storage-mongodb';
-
 import { restResources } from "@shopify/shopify-api/rest/admin/2024-04";
-// import prisma from "./db.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -37,6 +34,7 @@ const shopify = shopifyApp({
   hooks: {
     afterAuth: async ({ session }) => {
       shopify.registerWebhooks({ session });
+      console.log("session after auth", session)
     },
   },
   future: {
