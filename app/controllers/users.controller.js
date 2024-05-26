@@ -81,8 +81,6 @@ export async function loggedInCheck({ sessionToken }) {
             // }
         })
 
-        return true
-
         // console.log("resp :: loggedInCheck() :: users.controller.js", resp?.find(user => user?.session_token === sessionToken))
 
         if (!resp?.length) {

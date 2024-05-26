@@ -96,7 +96,7 @@ export default function App() {
       {
         isLogedIn && (
           <ui-title-bar title={ isLogedIn?.username }>
-            <button variant="primary" loading={ true } onClick={logoutHandle}>
+            <button variant="primary" onClick={logoutHandle}>
               Logout
             </button>
           </ui-title-bar>
