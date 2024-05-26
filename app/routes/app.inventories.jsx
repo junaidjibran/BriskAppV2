@@ -1,9 +1,9 @@
 import { json, useActionData, useLoaderData, useNavigate, useNavigation, useSubmit } from "@remix-run/react"
-import { Badge, Card, Page, ResourceItem, ResourceList, Text, Modal } from "@shopify/polaris"
+import { Card, Page, ResourceItem, ResourceList, Text, Modal } from "@shopify/polaris"
 import { EditIcon, DeleteIcon } from "@shopify/polaris-icons"
 import { useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
-import { getInventories, deleteSize } from "../controllers/inventory.controller"
+import { getInventories, deleteInventory } from "../controllers/inventory.controller"
 import Loader from "../components/loader"
 import NotLoggedInScreen from "../components/notLoggedInScreen"
 
@@ -32,7 +32,7 @@ export const action = async ({ request }) => {
     const id = formData.get('id')
 
     if(type == 'delete'){
-        const newinventories = await deleteSize({ id });
+        const newinventories = await deleteInventory({ id });
             return json({ data: { inventories: newinventories ?? null }, status: 'success', message: "Size deleted successfully." }, { status: STATUS_CODES.OK })
     }
     return json({ data: "Action" })
@@ -61,13 +61,6 @@ export default function Inventory() {
             setinventories(loaderData?.data?.inventories ?? [])
         }
     }, [loaderData])
-    
-
-    if (loaderData?.status === "NOT_LOGGED_IN") {
-        return (
-            <NotLoggedInScreen />
-        )
-    }
 
     useEffect(() => {
         setActiveDelete(false)
@@ -93,6 +86,12 @@ export default function Inventory() {
             encType: 'multipart/form-data',
             relative: 'route',
         })
+    }
+
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
     }
 
     return (
