@@ -1,5 +1,5 @@
 import { json, useActionData, useLoaderData, useNavigation, useParams, useSubmit } from "@remix-run/react"
-import { Badge, Button, Card, Page, TextField, FormLayout } from "@shopify/polaris"
+import { Badge, Button, Card, Page, TextField, FormLayout, Text } from "@shopify/polaris"
 import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
 import { getInventory, createInventory, updateInventory } from "../controllers/inventory.controller"
@@ -52,6 +52,9 @@ export const action = async ({ request, params }) => {
 export default function User() {
     const [sku, setSku] = useState('');
     const [inventory, setInvetory] = useState('');
+    const [incommingInventory, setIncommingInventory] = useState('');
+    const [calculatedInventory, setCalculatedInventory] = useState(inventory);
+    
     const {id} = useParams()
     const loaderData = useLoaderData();
     const actionData = useActionData();
@@ -64,6 +67,10 @@ export default function User() {
     console.log("actionData", actionData)
     const isPageLoading = ["loading"].includes(nav.state);
     const isSubmitting = ["submitting"].includes(nav.state) && ["POST"].includes(nav.formMethod)
+
+    useEffect(() => {
+      setCalculatedInventory( parseInt(inventory) + parseInt(incommingInventory) )
+    }, [incommingInventory])
 
     useEffect(() => {
         if (loaderData?.status === "error") {
@@ -83,6 +90,7 @@ export default function User() {
             }
 
             if (actionData?.status === 'success') {
+                setCalculatedInventory(inventory)
                 shopify.toast.show(actionData?.message, { isError: false });
                 if(id == 'create'){
                   navigate(`/app/inventory/${actionData?.data?.inventory?.id}`)
@@ -94,7 +102,7 @@ export default function User() {
     const handleSubmit = () => {
         submit({
             sku,
-            inventory
+            inventory : calculatedInventory > inventory ? calculatedInventory : inventory,
         },
         {
             action: "",
@@ -139,16 +147,40 @@ export default function User() {
                         helpText="Enter inventory of product"
                         value={inventory}
                         onChange={handleInventory}
+                        suffix="meters"
                       />
-                      :
-                      <TextField
-                      type="number"
-                      name="inventory"
-                      label="Current Inventory"
-                      value={inventory}
-                      disabled
-                    /> 
+                      : <>
+                        <div style={{marginTop: '10px'}}>
+                          <TextField
+                            type="number"
+                            name="inventory"
+                            label="Current Inventory"
+                            value={inventory}
+                            disabled
+                            suffix="meters"
+                          /> 
+
+                        </div>
+                        <div style={{marginTop: '10px'}}>
+                          <TextField
+                            type="number"
+                            name="newinventory"
+                            label="Adjust by new Inventory"
+                            value={incommingInventory}
+                            onChange={(val) => setIncommingInventory(val)}
+                            suffix="meters"
+                          /> 
+
+                        </div>
+                        <div style={{marginTop: '10px'}}>
+                          {
+                            calculatedInventory > inventory && <Text>Total Inventory : { calculatedInventory }</Text>
+                          }
+                        </div>
+                        
+                      </>
                     }
+                    
                   </FormLayout>
                 </Card>
             </Page>

@@ -2,7 +2,7 @@
 
 client_id = "ee6dce8d57fca5227655ce4f69dfc19f"
 name = "brisk"
-application_url = "https://pension-packard-mistress-aim.trycloudflare.com"
+application_url = "https://wind-myspace-wb-font.trycloudflare.com"
 embedded = true
 
 [build]
@@ -15,9 +15,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://pension-packard-mistress-aim.trycloudflare.com/auth/callback",
-  "https://pension-packard-mistress-aim.trycloudflare.com/auth/shopify/callback",
-  "https://pension-packard-mistress-aim.trycloudflare.com/api/auth/callback"
+  "https://wind-myspace-wb-font.trycloudflare.com/auth/callback",
+  "https://wind-myspace-wb-font.trycloudflare.com/auth/shopify/callback",
+  "https://wind-myspace-wb-font.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
