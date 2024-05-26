@@ -37,6 +37,8 @@ export default function App() {
         <Link to="/app">Orders</Link>
         <Link to="/app/vectors">Settings</Link>
         <Link to="/app/manageUsers">Manage Users</Link>
+        <Link to="/app/meterPerSize">Size per meter</Link>
+        <Link to="/app/inventories">Inventory</Link>
       </NavMenu>
       {
         isLogedIn && (
