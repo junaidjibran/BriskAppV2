@@ -93,7 +93,7 @@ export default function App() {
       </NavMenu>
       {
         isLogedIn && (
-          <ui-title-bar title="Brisk App">
+          <ui-title-bar title={ isLogedIn?.username }>
             <button variant="primary" loading={ true } onClick={logoutHandle}>
               Logout
             </button>
