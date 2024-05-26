@@ -48,13 +48,13 @@ const deleteSession = async (request) => {
     const isLogedIn = session.has("customToken")
 
     // To check user is logged In. if not delete session form cookies.
-    if (!isLogedIn) {
-        return { 
-            headers: {
-                "Set-Cookie": await destroySession(session),
-            } 
-        }
-    }
+    // if (!isLogedIn) {
+    //     return { 
+    //         headers: {
+    //             "Set-Cookie": await destroySession(session),
+    //         } 
+    //     }
+    // }
 
     return false
 }

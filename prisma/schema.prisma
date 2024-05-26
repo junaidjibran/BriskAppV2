@@ -98,6 +98,22 @@ model users {
   updated_at    DateTime @updatedAt
 }
 
+model metersPerSize {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  size_title   String   @unique
+  cloth_meters Int   
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model inventory {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sku          String   @unique
+  inventory    Int   
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
 enum VectorType {
   CustomOrder
   ShopShirt
