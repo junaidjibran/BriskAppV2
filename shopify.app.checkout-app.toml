@@ -3,12 +3,13 @@
 client_id = "516e437308288c6e2b2ad42bda0b1693"
 name = "checkout-app"
 handle = "checkout-app-526"
-application_url = "https://fist-surname-hopefully-hill.trycloudflare.com"
+application_url = "https://impacts-great-electron-refused.trycloudflare.com"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
 dev_store_url = "checkout-testing-app.myshopify.com"
+include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
@@ -16,9 +17,9 @@ scopes = "read_checkout_branding_settings,read_customers,read_delivery_customiza
 
 [auth]
 redirect_urls = [
-  "https://fist-surname-hopefully-hill.trycloudflare.com/auth/callback",
-  "https://fist-surname-hopefully-hill.trycloudflare.com/auth/shopify/callback",
-  "https://fist-surname-hopefully-hill.trycloudflare.com/api/auth/callback"
+  "https://impacts-great-electron-refused.trycloudflare.com/auth/callback",
+  "https://impacts-great-electron-refused.trycloudflare.com/auth/shopify/callback",
+  "https://impacts-great-electron-refused.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
@@ -30,7 +31,7 @@ api_version = "2023-10"
   shop_deletion_url = "https://ee52-2400-adc5-41f-6a00-b72c-c1ab-3d3d-c039.ngrok-free.app"
 
 [app_proxy]
-url = "https://fist-surname-hopefully-hill.trycloudflare.com"
+url = "https://impacts-great-electron-refused.trycloudflare.com"
 subpath = "checkout"
 prefix = "apps"
 

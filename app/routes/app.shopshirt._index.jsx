@@ -19,20 +19,17 @@ import { useEffect, useState } from "react";
 import { hasNextPage, hasPreviousPage } from "../controllers/shopshirt_controller";
 import Loader from "../components/loader";
 import NotLoggedInScreen from "../components/notLoggedInScreen.jsx";
-import { deleteSession } from "../helpers/session.server.js";
-// import { loggedInCheckRedirect } from "../helpers/session.server.js";
-
+import { loggedInCheck } from "../controllers/users.controller.js";
 
 export async function loader({ request }) {
-    // await loggedInCheckRedirect(request)
-    const { admin, session } = await authenticate.admin(request);
+    const { admin, session, sessionToken } = await authenticate.admin(request);
     if (!admin) {
         return json({ err: 'Not authenticated' })
     }
 
-    const deleteSessionIfNotLogin = await deleteSession(request)
-    if (deleteSessionIfNotLogin) {
-        return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+    const isLoggedIn = await loggedInCheck({ sessionToken })
+    if (!isLoggedIn) {
+        return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
     }
 
     const url = new URL(request.url);

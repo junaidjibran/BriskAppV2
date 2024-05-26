@@ -4,10 +4,8 @@ import { json } from "@remix-run/node";
 import { useActionData, useSubmit, useLoaderData } from "@remix-run/react";
 import { syncWebhooks } from "../controllers/webhooksController";
 import { appWebhooks } from "../constants/webhooks";
-import { loggedInCheckRedirect } from "../helpers/session.server";
 
 export const loader = async ({ request }) => {
-  await loggedInCheckRedirect(request)
   const { admin, session } = await authenticate.admin(request);
   const allWebhooks = await admin.rest.resources.Webhook.all({
     session: session,

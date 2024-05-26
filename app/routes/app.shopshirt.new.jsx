@@ -13,28 +13,34 @@ import {
   } from "@remix-run/react";
 import Loader from '../components/loader';
 import NotLoggedInScreen from "../components/notLoggedInScreen";
-import { deleteSession } from "../helpers/session.server";
+import { loggedInCheck } from "../controllers/users.controller";
 
 export async function loader({request}) {
-    const { admin } = await authenticate.admin(request);
-    if(!admin){
-        return json({err: 'Not authenticated'})
-    }
+    try {
+        const { admin, sessionToken } = await authenticate.admin(request);
 
-    const deleteSessionIfNotLogin = await deleteSession(request)
-    if (deleteSessionIfNotLogin) {
-        return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
-    }
-
-    const vectorsData = await  prisma.vectors.findMany({
-        where: {
-            type: "ShopShirt"
+        if(!admin){
+            return json({err: 'Not authenticated'})
         }
-    })
-
-    console.log('--------vectorsData', vectorsData);
     
-    return json({vectorsData})
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+    
+        const vectorsData = await  prisma.vectors.findMany({
+            where: {
+                type: "ShopShirt"
+            }
+        })
+    
+        console.log('--------vectorsData', vectorsData);
+        
+        return json({vectorsData})
+        
+    } catch (error) {
+        
+    }
 }
 
 export async function action({ request }) {

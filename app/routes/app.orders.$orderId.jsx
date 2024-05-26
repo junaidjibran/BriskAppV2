@@ -22,19 +22,17 @@ import Loader from "../components/loader";
 import OrderDetailSheet from "../components/orderDetailSheet";
 import CustomBadge from "../components/badge";
 import { STATUS_CODES } from "../helpers/response";
-import { deleteSession } from "../helpers/session.server";
 import NotLoggedInScreen from "../components/notLoggedInScreen";
-// import { loggedInCheckRedirect } from "../helpers/session.server";
+import { loggedInCheck } from "../controllers/users.controller";
 
 export const loader = async ({ request, params }) => {
-	// await loggedInCheckRedirect(request)
 	try {
-		const { admin } = await authenticate.admin(request);
+		const { admin, sessionToken } = await authenticate.admin(request);
 		let orderId = params.orderId
 
-		const deleteSessionIfNotLogin = await deleteSession(request)
-        if (deleteSessionIfNotLogin) {
-            return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
+		const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
 
 		const factories = await prisma.factories.findMany();
