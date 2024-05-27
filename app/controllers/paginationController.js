@@ -2,10 +2,7 @@ import prisma from "../db.server";
 
 export async function getPaginatedData({ cursor, take, shop, collection }) {
     try {
-        const data = await prisma[collection].findMany({
-            where: {
-                shop
-            },
+        const query = {
             cursor,
             take,
             skip: 1,
@@ -13,7 +10,14 @@ export async function getPaginatedData({ cursor, take, shop, collection }) {
             orderBy: {
                 created_at: 'desc',
             },
-        });
+        }
+
+        if (shop) {
+            query["where"] = {
+                shop: shop
+            }
+        }
+        const data = await prisma[collection].findMany(query);
         return data;
     } catch (error) {
         console.error('ERROR: getPaginatedData() :: Controller => paginationController ::: Catch ::: ', error)

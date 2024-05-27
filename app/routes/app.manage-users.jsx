@@ -22,10 +22,30 @@ export const loader = async ({ request }) => {
         }
 
         if (!users) {
-            return json({ status: "error", message: "There is an issue while fetching users" }, { status: STATUS_CODES.BAD_REQUEST })
+            return json(
+                { 
+                    status: "error", 
+                    message: "There is an issue while fetching users",
+                    data: {
+                        scopes: isLoggedIn?.access, 
+                        isAdmin: isLoggedIn?.is_admin
+                    }
+
+                }, 
+                { status: STATUS_CODES.BAD_REQUEST }
+            )
         }
 
-        return json({ data: { users: users ?? [], scopes: isLoggedIn?.access, isAdmin: isLoggedIn?.is_admin } }, { status: STATUS_CODES.OK })
+        return json(
+            { 
+                data: { 
+                    users: users ?? [], 
+                    scopes: isLoggedIn?.access, 
+                    isAdmin: isLoggedIn?.is_admin 
+                } 
+            }, 
+            { status: STATUS_CODES.OK }
+        )
     } catch (error) {
         return json({ error: JSON.stringify(error), status: "error", message: "Something went wrong..." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -47,10 +67,10 @@ export const action = async ({ request }) => {
             return json({ status: "error", message: "User already exist from this email." })
         }
 
-        const createNewUser = await createUser({ 
-            email: jsonData?.email, 
-            username: jsonData?.username, 
-            password: jsonData?.password 
+        const createNewUser = await createUser({
+            email: jsonData?.email,
+            username: jsonData?.username,
+            password: jsonData?.password
         })
 
         if (!createNewUser) {
@@ -102,7 +122,6 @@ export default function ManageUsers() {
             ...prev,
             [key]: value
         }))
-        
     }, [])
 
     useEffect(() => {
@@ -150,29 +169,29 @@ export default function ManageUsers() {
 
     const validateForm = () => {
         let newErrors = {};
-    
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
+
         if (!emailRegex.test(createUser.email)) {
-          newErrors.email = "Invalid email format.";
+            newErrors.email = "Invalid email format.";
         }
         if (createUser.username.trim() === "") {
-          newErrors.username = "Username is required.";
+            newErrors.username = "Username is required.";
         }
         if (createUser.password.trim() === "") {
-          newErrors.password = "Password is required.";
+            newErrors.password = "Password is required.";
         }
         if (createUser.confirmPassword.trim() === "") {
-          newErrors.confirmPassword = "Confirm Password is required.";
+            newErrors.confirmPassword = "Confirm Password is required.";
         }
         if (createUser.password !== createUser.confirmPassword) {
-          newErrors.confirmPassword = "Passwords do not match.";
+            newErrors.confirmPassword = "Passwords do not match.";
         }
 
         setErrors(newErrors);
-    
+
         return newErrors;
-      };
+    };
 
     const generatePassword = () => {
         const getString = generateRandomString(12);
@@ -208,7 +227,7 @@ export default function ManageUsers() {
                     JSON.stringify(errors, null, 4)
                 }
             </pre> */}
-            { isPageLoading && (<Loader />) }
+            {isPageLoading && (<Loader />)}
             <Page
                 title="Manage Users"
             >
@@ -239,7 +258,7 @@ export default function ManageUsers() {
                                     onChange={(value) => handleForm('email', value)}
                                     placeholder="example@gmail.com"
                                     autoComplete="on"
-                                    error={ errors?.email ?? "" }
+                                    error={errors?.email ?? ""}
                                 />
                                 <TextField
                                     type="text"
@@ -248,7 +267,7 @@ export default function ManageUsers() {
                                     value={createUser?.username}
                                     onChange={(value) => handleForm('username', value)}
                                     autoComplete="off"
-                                    error={ errors?.username ?? "" }
+                                    error={errors?.username ?? ""}
                                 />
                                 <TextField
                                     type="text"
@@ -258,7 +277,7 @@ export default function ManageUsers() {
                                     onChange={(value) => handleForm('password', value)}
                                     placeholder="••••••••"
                                     autoComplete="off"
-                                    error={ errors?.password ?? "" }
+                                    error={errors?.password ?? ""}
                                 />
                                 <TextField
                                     type="test"
@@ -268,20 +287,20 @@ export default function ManageUsers() {
                                     onChange={(value) => handleForm('confirmPassword', value)}
                                     placeholder="••••••••"
                                     autoComplete="off"
-                                    error={ errors?.confirmPassword ?? "" }
+                                    error={errors?.confirmPassword ?? ""}
                                 />
                             </InlineGrid>
-                            <Button 
-                                fullWidth={true} 
-                                size="large" 
+                            <Button
+                                fullWidth={true}
+                                size="large"
                                 variant="primary"
-                                onClick={ generatePassword }>Generate password</Button>
+                                onClick={generatePassword}>Generate password</Button>
                         </FormLayout>
                     </Modal.Section>
                 </Modal>
                 <Card>
                     <ResourceList
-                        alternateTool={<Button onClick={ handleAddUserModel }>Add User</Button>}
+                        alternateTool={<Button onClick={handleAddUserModel}>Add User</Button>}
                         resourceName={{ singular: 'user', plural: 'users' }}
                         items={users}
                         renderItem={(user) => {

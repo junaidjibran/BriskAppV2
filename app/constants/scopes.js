@@ -1,6 +1,6 @@
 export const userScopes = [
-    "view_order",
-    "edit_order",
+    "view_orders",
+    "edit_orders",
     "view_vectors",
     "write_vectors",
     "view_shopshirt",

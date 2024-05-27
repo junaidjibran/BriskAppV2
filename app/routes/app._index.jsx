@@ -21,6 +21,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
 import NotLoggedInScreen from "../components/notLoggedInScreen";
 import { loggedInCheck } from "../controllers/users.controller";
+import AccessScreen from "../components/accessScreen";
 
 export const loader = async ({ request, params }) => {
     try {
@@ -81,7 +82,16 @@ export const loader = async ({ request, params }) => {
         const getOrderCall = await prisma.shopify_orders.findMany(query)
 
         if (!getOrderCall.length) {
-            return json({ error: "DB: Orders not found" }, { status: STATUS_CODES.NOT_FOUND })
+            return json(
+                { 
+                    message: "DB: Orders not found", 
+                    data: { 
+                        orders: getOrderCall,
+                        scopes: isLoggedIn?.access, 
+                        isAdmin: isLoggedIn?.is_admin
+                    } 
+                }, 
+                { status: STATUS_CODES.NOT_FOUND })
         }
         // jsonLogs(getOrderCall.length, "getOrderCall---------------");
 
@@ -173,7 +183,16 @@ export const loader = async ({ request, params }) => {
             };
         });
         
-        return json({ data: { orders: updatedOrders, pageInfo: pagination, scopes: isLoggedIn?.access } }, { status: STATUS_CODES.OK })
+        return json(
+            { 
+                data: { 
+                    orders: updatedOrders, 
+                    pageInfo: pagination, 
+                    scopes: isLoggedIn?.access, 
+                    isAdmin: isLoggedIn?.is_admin
+                } 
+            },
+            { status: STATUS_CODES.OK })
     } catch (error) {
         console.error("Loader Error:", error);
         return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
@@ -266,9 +285,21 @@ export default function Orders({ params }) {
 
     if (loadedData?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <>
+                { nav.state === 'loading' ? <Loader /> : null }
+                <NotLoggedInScreen />
+            </>
         )
     }
+
+    if (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('view_orders')) {
+        return (
+            <>
+                <AccessScreen />
+            </>
+        )
+    }
+    
 
 
     // const isloading = nav.state === "loading";

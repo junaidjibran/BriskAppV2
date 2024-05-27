@@ -112,6 +112,7 @@ export default function Vectors() {
     const actionData = useActionData();
     const submit = useSubmit();
     const nav = useNavigation();
+    const pageTitle = "Vectors"
     // const matches = useMatches();
     const location = useLocation();
     console.log('matches', location)
@@ -407,7 +408,13 @@ export default function Vectors() {
 
     if (loadedData?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <>
+                <Page title={ pageTitle }>
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <SettingsNav currentRoute={ location } />
+                    <NotLoggedInScreen />
+                </Page>
+            </>
         )
     }
 

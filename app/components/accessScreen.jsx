@@ -23,7 +23,7 @@ export default function AccessScreen() {
                         //   }
                         image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                         >
-                        <p>You do not have the necessary permissions to view this page. Please contact your administrator if you believe this is an error or if you need access to this page.</p>
+                        <p>You do not have the necessary permissions to view this page. Please contact your administrator.</p>
                     </EmptyState>
                 </Card>
             </Page>

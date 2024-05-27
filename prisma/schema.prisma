@@ -98,7 +98,7 @@ model users {
   updated_at    DateTime @updatedAt
 }
 
-model metersPerSize {
+model meters_per_size {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   size_title   String   @unique
   cloth_meters Int   

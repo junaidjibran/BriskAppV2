@@ -25,7 +25,7 @@ export const action = async ({ request }) => {
 	// console.log('---------subs called 2')
 	try {
 		if (shop && payload) {
-			// console.log("Shop", shop, JSON.stringify(payload, null, 4));
+			console.log("Shopify webhook order payload", shop, JSON.stringify(payload, null, 4));
 			console.log("has Session-------------------")
 			const statusArray = [];
 			const payloadLineItems = payload?.line_items;
