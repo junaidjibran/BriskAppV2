@@ -271,7 +271,10 @@ export default function OrderDetail() {
 
 	if (loadedData?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <>
+                { nav.state === 'loading' ? <Loader /> : null }
+                <NotLoggedInScreen />
+            </>
         )
     }
 

@@ -266,10 +266,17 @@ export default function FactorySetting() {
 
     const handleClearButtonClick = useCallback(() => setTextFieldValue(''), []);
 
+    const pageTitle = "Factory"
 
     if (data?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <>
+                <Page title={ pageTitle }>
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <SettingsNav currentRoute={ routeLocation } />
+                    <NotLoggedInScreen />
+                </Page>
+            </>
         )
     }
 

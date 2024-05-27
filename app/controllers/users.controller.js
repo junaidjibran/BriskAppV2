@@ -70,7 +70,6 @@ export async function createUser(params) {
 
 export async function loggedInCheck({ sessionToken }) {
     try {
-        // console.log("loggedInCheck :: ", sessionToken, "prisma ::", prisma)
         const resp  = await prisma.users.findMany({
             where: {
                 session_token: sessionToken?.sid
@@ -88,7 +87,6 @@ export async function loggedInCheck({ sessionToken }) {
         if (!resp?.length) {
             return false
         }
-
         // console.log(resp?.find(user => user?.session_token === sessionToken?.sid))
 
         return resp?.find(user => user?.session_token === sessionToken?.sid) ?? false;

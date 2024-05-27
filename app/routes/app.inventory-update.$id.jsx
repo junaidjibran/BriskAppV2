@@ -1,11 +1,9 @@
 import { json, useActionData, useLoaderData, useNavigation, useParams, useSubmit } from "@remix-run/react"
-import { Badge, Button, Card, Page, TextField, FormLayout, Text } from "@shopify/polaris"
+import { Button, Card, Page, TextField, FormLayout, Text } from "@shopify/polaris"
 import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
 import { getInventory, createInventory, updateInventory } from "../controllers/inventory.controller"
 import Loader from "../components/loader"
-import { useNavigate } from "@remix-run/react"
-
 export const loader = async ({ request, params }) => {
     try {
         const inventoryId = params.id

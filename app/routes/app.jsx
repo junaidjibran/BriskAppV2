@@ -88,10 +88,8 @@ export default function App() {
       <NavMenu>
         <Link to="/app">Orders</Link>
         <Link to="/app/vectors">Settings</Link>
-        <Link to="/app/manageUsers">Manage Users</Link>
-        <Link to="/app/meterPerSize">Size per meter</Link>
-        <Link to="/app/inventories">Inventory</Link>
-        <Link to="/app/login">Login</Link>
+        <Link to="/app/manage-users">Manage Users</Link>
+        <Link to="/app/inventory-export">Inventory</Link>
       </NavMenu>
       {
         isLogedIn && (

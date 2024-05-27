@@ -1,18 +1,16 @@
-import { json, useActionData, useLoaderData, useNavigate, useNavigation, useSubmit } from "@remix-run/react"
-import { Badge, Card, Page, ResourceItem, ResourceList, Text, Modal } from "@shopify/polaris"
+import { json, useActionData, useLoaderData, useLocation, useNavigate, useNavigation, useSubmit } from "@remix-run/react"
+import { Card, Page, ResourceItem, ResourceList, Text, Modal, EmptyState, Button } from "@shopify/polaris"
 import { EditIcon, DeleteIcon } from "@shopify/polaris-icons"
 import { useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
-// import { getUsers } from "../controllers/users.controller"
-import { getSizes, deleteSize } from "../controllers/sizes.controller"
+import { getInventories, deleteInventory } from "../controllers/inventory.controller"
 import Loader from "../components/loader"
 import NotLoggedInScreen from "../components/notLoggedInScreen"
-// import { deleteSession } from "../helpers/session.server"
+import InventoryNav from "../components/InventoryNav"
 
 export const loader = async ({ request }) => {
     try {
-        const sizes = await getSizes();
-        console.log('===========sizes', sizes)
+        const inventories = await getInventories();
         // const deleteSessionIfNotLogin = await deleteSession(request)
         // if (deleteSessionIfNotLogin) {
         //     return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
@@ -23,7 +21,7 @@ export const loader = async ({ request }) => {
         // }
 
         // return json({ data: { users: users ?? [] } }, { status: STATUS_CODES.OK })
-        return json({ data: { sizes: sizes ?? [] } }, { status: STATUS_CODES.OK })
+        return json({ data: { inventories: inventories ?? [] } }, { status: STATUS_CODES.OK })
     } catch (error) {
         return json({ error: JSON.stringify(error), status: "error", message: "Something went wrong..." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -35,42 +33,36 @@ export const action = async ({ request }) => {
     const id = formData.get('id')
 
     if(type == 'delete'){
-        const newSizes = await deleteSize({ id });
-            return json({ data: { sizes: newSizes ?? null }, status: 'success', message: "Size deleted successfully." }, { status: STATUS_CODES.OK })
+        const newinventories = await deleteInventory({ id });
+            return json({ data: { inventories: newinventories ?? null }, status: 'success', message: "Size deleted successfully." }, { status: STATUS_CODES.OK })
     }
     return json({ data: "Action" })
 }
 
-export default function MterePerSize() {
+export default function Inventory() {
     const loaderData = useLoaderData();
     const actionData = useActionData();
     const navigate = useNavigate();
     const nav = useNavigation();
+    const location = useLocation()
     console.log("loaderData", loaderData)
     console.log("actionData", actionData)
     const [activeDelete, setActiveDelete] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const submit = useSubmit();
     const isPageLoading = ["loading"].includes(nav.state);
-    const [sizes, setsizes] = useState([])
+    const [inventories, setinventories] = useState([])
 
     useEffect(() => {
         if (loaderData?.status === "error") {
             shopify.toast.show(loaderData?.message, { isError: true });
         }
 
-        if (loaderData?.data?.sizes) {
+        if (loaderData?.data?.inventories) {
             console.log("isLoaderData")
-            setsizes(loaderData?.data?.sizes ?? [])
+            setinventories(loaderData?.data?.inventories ?? [])
         }
     }, [loaderData])
-    
-
-    if (loaderData?.status === "NOT_LOGGED_IN") {
-        return (
-            <NotLoggedInScreen />
-        )
-    }
 
     useEffect(() => {
         setActiveDelete(false)
@@ -98,21 +90,43 @@ export default function MterePerSize() {
         })
     }
 
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <NotLoggedInScreen />
+        )
+    }
+
     return (
         <>
             { isPageLoading && (<Loader />) }
-            <Page title="Meters per Size" primaryAction={{content: 'Create New', onAction: () => navigate('/app/size/create')}}>
+            
+            <Page 
+                title="Update Inventory" 
+                // primaryAction={{content: 'Add New', onAction: () => navigate('/app/inventory/create')}}
+            >
+                <InventoryNav currentRoute={ location } />
                 <Card>
                     <ResourceList
-                        resourceName={{ singular: 'size', plural: 'sizes' }}
-                        items={sizes}
-                        renderItem={(size) => {
-                            const { id, size_title : sizeTitle, cloth_meters : meters } = size;
+                        alternateTool={<Button onClick={() => navigate('/app/inventory/create')}>Add New</Button>}
+                        resourceName={{ singular: 'inventory', plural: 'inventories' }}
+                        items={inventories}
+                        emptyState={
+                            (
+                                <EmptyState
+                                    heading="No found"
+                                    action={{ content: 'Add New', onAction: () => navigate('/app/inventory/create') }}
+                                    image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                                >
+                                </EmptyState>
+                            )
+                        }
+                        renderItem={(inventory) => {
+                            const { id, sku , inventory : currentInventory } = inventory;
                             const shortcutActions = [
                                 {
-                                    content: 'Edit',
+                                    content: 'Adjust',
                                     icon: EditIcon,
-                                    onAction: () => { navigate(`/app/size/${ id }`) }
+                                    onAction: () => { navigate(`/app/inventory/${ id }`) }
                                 },
                                 {
                                     content: 'Delete',
@@ -133,12 +147,12 @@ export default function MterePerSize() {
                                     <div style={{display: 'flex'}}>
                                         <div style={{flex : "0 0 30%", marginRight: '10px'}}>
                                             <Text variant="bodyMd" fontWeight="bold" as="h3">
-                                                Size : { sizeTitle} 
+                                                SKU : { sku} 
                                             </Text>
                                         </div>
 
                                     <Text variant="bodyMd" fontWeight="bold" as="h4">
-                                        Meter : { meters }
+                                        Inventory : { currentInventory }
                                     </Text>
 
                                     </div>

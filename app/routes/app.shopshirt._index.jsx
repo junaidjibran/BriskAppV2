@@ -203,9 +203,17 @@ export default function Shopshirt() {
     //     }
     // };
 
+    const pageTitle = "Shop Shirt"
+
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <>
+                <Page title={ pageTitle }>
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <SettingsNav currentRoute={ location } />
+                    <NotLoggedInScreen />
+                </Page>
+            </>
         )
     }
 

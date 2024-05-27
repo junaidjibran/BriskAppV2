@@ -7,7 +7,7 @@ export async function syncWebhooks(admin, session, webhooksToBeRegistered) {
       resolve('success')
 
       // const appUrl = process.env.NODE_ENV === 'development' ? 'https://encourage-endless-beans-martin.trycloudflare.com' : process.env.SHOPIFY_APP_URL
-      const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : ''
+      const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://rp-equal-sofa-drops.trycloudflare.com'
       
       for (let index = 0; index < webhooksToBeRegistered.length; index++) {
         const singleWebhook = webhooksToBeRegistered[index];

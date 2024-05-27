@@ -25,6 +25,7 @@ import CustomBadge from '../../components/badge';
 import { STATUS_CODES } from '../../helpers/response';
 import { authenticate } from '../../shopify.server';
 import { loggedInCheck } from '../../controllers/users.controller';
+import NotLoggedInScreen from '../../components/notLoggedInScreen';
 
 export async function loader({ request }) {
     try {
@@ -278,6 +279,20 @@ export default function StatusSettings() {
     }
 
     const handleClearButtonClick = useCallback(() => setTextFieldValue(''), []);
+    const pageTitle = "Manufacturing Status"
+
+    if (data?.status === "NOT_LOGGED_IN") {
+        return (
+            <>
+                <Page title={ pageTitle }>
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <SettingsNav currentRoute={ location } />
+                    <NotLoggedInScreen />
+                </Page>
+            </>
+        )
+    }
+
     return (
         <>
         {nav.state === 'loading' ? <Loader /> : null}
@@ -337,18 +352,14 @@ export default function StatusSettings() {
                     }}
                 />
                 ) : (
-                    <Card>
+                    (
                         <EmptyState
-                            heading="Add a city list to get started"
-                            action={{
-                                content: 'Add New',
-                                onAction: () => openModal('create')
-                            }}
+                            heading="No found"
+                            action={{ content: 'Add New', onAction: () => openModal('create') }}
                             image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                         >
-                            <p>It looks like you haven't added any cities for any country yet. Click the "Add New" button to creating your city list.</p>
                         </EmptyState>
-                    </Card>
+                    )
                 )
             }
             </Card>

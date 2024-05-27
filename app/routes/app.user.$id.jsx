@@ -1,5 +1,5 @@
 import { json, useActionData, useLoaderData, useNavigation, useSubmit } from "@remix-run/react"
-import { Badge, Button, Card, Checkbox,  Divider, Page, Text } from "@shopify/polaris"
+import { Badge, Button, Card, Checkbox,  Divider, Modal, Page, Text } from "@shopify/polaris"
 import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
 import { getUser, loggedInCheck, updateUser } from "../controllers/users.controller"
@@ -90,7 +90,7 @@ export default function User() {
 
     const handleIsAdmin = useCallback((value) => {
         setIsAdmin(value);
-        setScopes(handleAllScope(value))
+        // setScopes(handleAllScope(value))
     }, [])
 
     useEffect(() => {
@@ -135,12 +135,12 @@ export default function User() {
         })
     }
 
-    const handleAllScope = (status) => {
-        return userScopes.reduce((obj, key) => {
-            obj[key] = status;
-            return obj;
-        }, {});
-    }
+    // const handleAllScope = (status) => {
+    //     return userScopes.reduce((obj, key) => {
+    //         obj[key] = status;
+    //         return obj;
+    //     }, {});
+    // }
 
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
@@ -162,7 +162,7 @@ export default function User() {
                         Update
                     </Button>
                 }
-                backAction={{ url: "../manageUsers" }}
+                backAction={{ url: "../manage-users" }}
             >
                 <Card>
                     <div style={{ padding: "10px 0" }}>
