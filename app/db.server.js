@@ -9,7 +9,7 @@ if (process.env.NODE_ENV !== "production") {
   }
 }
 
-console.log("db.server.js ::: prisma", JSON.stringify(prisma, null, 4))
+console.log("db.server.js ::: prisma", prisma?._engineConfig)
 
 export default prisma;
 
