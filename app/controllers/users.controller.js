@@ -1,5 +1,6 @@
 import prisma from "../db.server";
 
+
 export async function getUsers() {
     try {
         const resp  = await prisma.users.findMany()
