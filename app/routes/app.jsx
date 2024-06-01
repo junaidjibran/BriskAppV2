@@ -90,6 +90,7 @@ export default function App() {
         <Link to="/app/vectors">Settings</Link>
         <Link to="/app/manage-users">Manage Users</Link>
         <Link to="/app/inventory-export">Inventory</Link>
+        <Link to="/app/webhooksSync">Webhooks</Link>
       </NavMenu>
       {
         isLogedIn && (

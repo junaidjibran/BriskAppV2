@@ -13,3 +13,9 @@ export const inventorySizes = [
     { label: "19.5", value: "19.5" },
     { label: "20", value: "20" }
 ]
+
+export const inventoryEnum = [
+    "Measurements (Inches) (Neck)", 
+    "Collar Size", 
+    "What's your collar size? (Collar/Neck size)",
+]

@@ -107,14 +107,14 @@ export default function Inventory() {
                 <InventoryNav currentRoute={ location } />
                 <Card>
                     <ResourceList
-                        alternateTool={<Button onClick={() => navigate('/app/inventory/create')}>Add New</Button>}
+                        alternateTool={<Button onClick={() => navigate('/app/inventory-add/create')}>Add New</Button>}
                         resourceName={{ singular: 'inventory', plural: 'inventories' }}
                         items={inventories}
                         emptyState={
                             (
                                 <EmptyState
                                     heading="No found"
-                                    action={{ content: 'Add New', onAction: () => navigate('/app/inventory/create') }}
+                                    action={{ content: 'Add New', onAction: () => navigate('/app/inventory-add/create') }}
                                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                                 >
                                 </EmptyState>
@@ -126,7 +126,7 @@ export default function Inventory() {
                                 {
                                     content: 'Adjust',
                                     icon: EditIcon,
-                                    onAction: () => { navigate(`/app/inventory/${ id }`) }
+                                    onAction: () => { navigate(`/app/inventory-add/${ id }`) }
                                 },
                                 {
                                     content: 'Delete',

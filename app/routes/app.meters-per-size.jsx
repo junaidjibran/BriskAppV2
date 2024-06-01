@@ -65,9 +65,9 @@ export const loader = async ({ request }) => {
         // const getOrderCall = await prisma.shopify_orders.findMany(query)
         const sizes = await getSizes({ query });
 
-        if (!sizes.length) {
-            return json({ message: "No Size found in APP" }, { status: STATUS_CODES.NOT_FOUND })
-        }
+        // if (!sizes.length) {
+        //     return json({ message: "No Size found in APP" }, { status: STATUS_CODES.NOT_FOUND })
+        // }
         // jsonLogs(getOrderCall.length, "getOrderCall---------------");
 
         if (sizes?.length === defaultLimit) {

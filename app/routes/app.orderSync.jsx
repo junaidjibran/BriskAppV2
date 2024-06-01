@@ -8,6 +8,7 @@ import { orderCreation } from "../controllers/ordersController";
 import prisma from "../db.server";
 import { STATUS_CODES } from "../helpers/response";
 import { authenticate } from "../shopify.server";
+import { inventoryTransactions } from "../controllers/inventory.controller";
 
 export async function loader({ request }) {
     try {
@@ -22,14 +23,14 @@ export async function action({ request }) {
         const { admin, session } = await authenticate.admin(request);
 
         const formData = await request.formData();
-		const getOrderID = formData.get('orderID');
+        const getOrderID = formData.get('orderID');
 
         // const orderIDArray = JSON.parse(orderIDList) ?? []
         // if (!orderIDList || !orderIDArray.length) {
         //     return json({ error: "List or order IDS required." }, { status: STATUS_CODES.BAD_REQUEST})
         // }
         if (!getOrderID || !getOrderID.length) {
-            return json({ status: 'error', message: "Please enter order ID." }, { status: STATUS_CODES.BAD_REQUEST})
+            return json({ status: 'error', message: "Please enter order ID." }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
         // const ids = orderIDArray.map(id => "gid://shopify/Order/" + id);
@@ -67,16 +68,16 @@ export async function action({ request }) {
             }`,
             {
                 variables: {
-                    "id": `gid://shopify/Order/${ getOrderID }`
+                    "id": `gid://shopify/Order/${getOrderID}`
                 }
             }
         )
         // jsonLogs(shopifyOrdersResp, "shopify order resppppppp--------")
         const shopifyOrdersData = await shopifyOrdersResp.json()
-        
+
 
         if (!shopifyOrdersData?.data?.node) {
-            return json({ status: 'error', message: "Order not found against this ID" }, { status: STATUS_CODES.NOT_FOUND})
+            return json({ status: 'error', message: "Order not found against this ID" }, { status: STATUS_CODES.NOT_FOUND })
         }
 
         const orderID = shopifyOrdersData?.data?.node?.id?.split('/').pop();
@@ -88,7 +89,7 @@ export async function action({ request }) {
         // console.log("checkInDB", JSON.stringify(checkInDB, null, 4));
 
         if (checkInDB) {
-            return json({ status: 'error', message: "This order is already exist in App" }, { status: STATUS_CODES.FORBIDDEN})
+            return json({ status: 'error', message: "This order is already exist in App" }, { status: STATUS_CODES.FORBIDDEN })
         }
 
         const orderName = shopifyOrdersData?.data?.node?.name;
@@ -100,7 +101,7 @@ export async function action({ request }) {
             let sku = item?.sku ?? null;
             let quantity = item?.quantity ?? null;
             let title = item?.title ?? null;
-            let variantTitle = item?.variant_title ?? null;
+            let variantTitle = item?.variantTitle ?? null;
             let properties = item?.customAttributes?.map(prop => {
                 let name = prop?.key ?? null;
                 let value = prop?.value ?? null;
@@ -113,6 +114,11 @@ export async function action({ request }) {
         const shop = session?.shop;
 
         const dbCall = await orderCreation({ orderID, orderName, lineItems, shop, createdAt });
+        console.log("orderName", orderName)
+        if (dbCall) {
+            const inventoryTransaction = await inventoryTransactions({ lineItems, type: "REMOVE", orderName })
+            console.log("inventoryTransaction-==-=--=-=-=-=-=-=-=-=-=-=-=-=", JSON.stringify(inventoryTransaction, null, 4));
+        }
         // console.log("dbCall", JSON.stringify(dbCall, null, 4))
         return json({ status: 'success', data: dbCall, message: "Order successfull store in App" }, { status: STATUS_CODES.CREATED })
 
@@ -123,7 +129,7 @@ export async function action({ request }) {
 
 export default function OrderSync() {
     const location = useLocation();
-	const submit = useSubmit();
+    const submit = useSubmit();
     const nav = useNavigation();
 
     const actionData = useActionData();
@@ -135,7 +141,7 @@ export default function OrderSync() {
 
 
     const [orderID, setOrderIDs] = useState('');
-    const handleChange = useCallback((value) => setOrderIDs(value),[]);
+    const handleChange = useCallback((value) => setOrderIDs(value), []);
 
     useEffect(() => {
         if (actionData && actionData?.status?.length) {
@@ -150,27 +156,27 @@ export default function OrderSync() {
             }
         }
     }, [actionData])
-    
-    
+
+
     const submitHandle = async () => {
         console.log("orderID", orderID)
         // const stringToArray = convertToArray(orderID)
         // console.log(stringToArray)
         submit({
-			orderID: orderID
-		}, {
-			action: "",
-			method: "post",
-			encType: "multipart/form-data",
-			relative: "route",
-		});
+            orderID: orderID
+        }, {
+            action: "",
+            method: "post",
+            encType: "multipart/form-data",
+            relative: "route",
+        });
     }
 
     // const convertToArray = (input) => {
     //     if (!input || typeof input !== 'string') {
     //         return [];
     //     }
-    
+
     //     return input
     //         .split(',')
     //         .map(item => item.trim())
@@ -179,30 +185,30 @@ export default function OrderSync() {
 
     return (
         <>
-            { isLoading ? <Loader /> : null }
+            {isLoading ? <Loader /> : null}
             <Page
-				title={ "Order Sync" }
-			>
-                <SettingsNav 
-                    currentRoute={ location } 
+                title={"Order Sync"}
+            >
+                <SettingsNav
+                    currentRoute={location}
                 />
                 <Card>
                     <FormLayout>
-                    <TextField
-                        label="Enter order number"
-                        value={ orderID }
-                        onChange={handleChange}
-                        // multiline={3}
-                        autoComplete="off"
-                        helpText="Please enter order id like '5826925527331'"
-                    />
+                        <TextField
+                            label="Enter order number"
+                            value={orderID}
+                            onChange={handleChange}
+                            // multiline={3}
+                            autoComplete="off"
+                            helpText="Please enter order id like '5826925527331'"
+                        />
 
-                    <Button
-                        variant="primary"
-                        onClick={ submitHandle }
-                    >
-                        Order Sync
-                    </Button>
+                        <Button
+                            variant="primary"
+                            onClick={submitHandle}
+                        >
+                            Order Sync
+                        </Button>
                     </FormLayout>
                 </Card>
             </Page>

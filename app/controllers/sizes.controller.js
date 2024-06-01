@@ -29,7 +29,7 @@ export async function createSize({ size, meters }) {
         const resp = await prisma.meters_per_size.create({
             data: {
                 size_title: size,
-                cloth_meters: parseInt(meters)
+                cloth_meters: meters
             }
         })
         return resp;
@@ -47,7 +47,7 @@ export async function updateSize({ sizeId, size, meters }) {
             },
             data: {
                 size_title: size,
-                cloth_meters: parseInt(meters)
+                cloth_meters: meters
             }
         })
         return resp;

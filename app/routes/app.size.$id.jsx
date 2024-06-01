@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
 import { createSize, updateSize, getSize } from "../controllers/sizes.controller"
 import Loader from "../components/loader"
-import { inventorySizes } from "../constants/inventorySizes"
+import { inventorySizes } from "../constants/inventory"
 
 export const loader = async ({ request, params }) => {
     try {
@@ -42,13 +42,16 @@ export const action = async ({ request, params }) => {
 
         if (sizeId == 'create') {
             const newSize = await createSize({ size, meters });
-            return json({ data: { size: newSize ?? null }, status: 'success', message: "Size created successfully." }, { status: STATUS_CODES.OK })
+            if (!newSize) {
+                return json({ status: "error", message: "There is an issue while creating size" }, { status: STATUS_CODES.BAD_REQUEST })
+            }
+            return json({ data: { size: newSize }, status: 'success', message: "Size created successfully." }, { status: STATUS_CODES.OK })
         }
 
         const sizeResp = await updateSize({ sizeId, size, meters });
 
         if (!sizeResp) {
-            return json({ status: "error", message: "There is an issue while fetching size" }, { status: STATUS_CODES.BAD_REQUEST })
+            return json({ status: "error", message: "There is an issue while updading size" }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
         return json({ data: { size: sizeResp ?? null }, status: 'success', message: "Update size successfully." }, { status: STATUS_CODES.OK })
@@ -108,7 +111,7 @@ export default function Size() {
 
             if (actionData?.status === 'success') {
                 shopify.toast.show(actionData?.message, { isError: false });
-                if (id == 'create') {
+                if (id === 'create' && actionData?.data?.size?.id) {
                     navigate(`/app/size/${actionData?.data?.size?.id}`)
                 }
             }
@@ -120,9 +123,11 @@ export default function Size() {
         const validationErrors = validateForm();
         if (Object.keys(validationErrors).length) return
 
+        console.log("sizeData", sizeData)
+
         submit({
             size: sizeData?.size,
-            meters: sizeData?.meters
+            meters: sizeData?.meters?.toString()
         },
         {
             action: "",
@@ -147,9 +152,9 @@ export default function Size() {
     return (
         <>
             {isPageLoading && (<Loader />)}
-            {/* <pre>
+            <pre>
                 { JSON.stringify(sizeData, null, 4) }
-            </pre> */}
+            </pre>
             <Page
                 title={id == 'create' ? 'Create new size' : 'Update size'}
                 primaryAction={
@@ -189,6 +194,7 @@ export default function Size() {
                             label="Meters*"
                             helpText="Enter size of cloth in meters"
                             value={sizeData.meters}
+                            step={0.1}
                             onChange={ (value) => handleForm('meters', value) }
                             error={errors?.meters ?? ""}
                         />

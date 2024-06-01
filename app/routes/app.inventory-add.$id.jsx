@@ -1,4 +1,4 @@
-import { json, useActionData, useLoaderData, useNavigation, useParams, useSubmit } from "@remix-run/react"
+import { json, useActionData, useLoaderData, useNavigate, useNavigation, useParams, useSubmit } from "@remix-run/react"
 import { Button, Card, Page, TextField, FormLayout, Text } from "@shopify/polaris"
 import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
@@ -31,13 +31,16 @@ export const action = async ({ request, params }) => {
 
         if (inventoryId == 'create') {
             const newInventory = await createInventory({ sku, inventory });
+            if (!newInventory) {
+              return json({ status: "error", message: "There is an issue while creating inventory" }, { status: STATUS_CODES.BAD_REQUEST })
+            }
             return json({ data: { inventory: newInventory ?? null }, status: 'success', message: "inventory created successfully." }, { status: STATUS_CODES.OK })
         }
 
         const inventoryResp = await updateInventory({ inventoryId, sku , inventory });
  
         if (!inventoryResp) {
-            return json({ status: "error", message: "There is an issue while fetching inventory" }, { status: STATUS_CODES.BAD_REQUEST })
+            return json({ status: "error", message: "There is an issue while updating inventory" }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
         return json({ data: { inventory: inventoryResp ?? null }, status: 'success', message: "inventory updated successfully." }, { status: STATUS_CODES.OK })
@@ -49,9 +52,9 @@ export const action = async ({ request, params }) => {
 
 export default function User() {
     const [sku, setSku] = useState('');
-    const [inventory, setInvetory] = useState('');
-    const [incommingInventory, setIncommingInventory] = useState('');
-    const [calculatedInventory, setCalculatedInventory] = useState(inventory);
+    const [inventory, setInvetory] = useState(0);
+    const [incommingInventory, setIncommingInventory] = useState(0);
+    const [calculatedInventory, setCalculatedInventory] = useState(0);
     
     const {id} = useParams()
     const loaderData = useLoaderData();
@@ -67,7 +70,7 @@ export default function User() {
     const isSubmitting = ["submitting"].includes(nav.state) && ["POST"].includes(nav.formMethod)
 
     useEffect(() => {
-      setCalculatedInventory( parseInt(inventory) + parseInt(incommingInventory) )
+      setCalculatedInventory( parseFloat(inventory) + parseFloat(incommingInventory) )
     }, [incommingInventory])
 
     useEffect(() => {
@@ -77,7 +80,8 @@ export default function User() {
 
         if (loaderData?.data?.inventory?.sku) {
             setSku(loaderData?.data?.inventory?.sku ?? null)
-            setInvetory(loaderData?.data?.inventory?.inventory ?? false )
+            setInvetory(loaderData?.data?.inventory?.inventory ?? 0 )
+            setCalculatedInventory(loaderData?.data?.inventory?.inventory ?? 0)
         }
     }, [loaderData])
 
@@ -90,8 +94,9 @@ export default function User() {
             if (actionData?.status === 'success') {
                 setCalculatedInventory(inventory)
                 shopify.toast.show(actionData?.message, { isError: false });
-                if(id == 'create'){
-                  navigate(`/app/inventory/${actionData?.data?.inventory?.id}`)
+                setIncommingInventory(0);
+                if(id == 'create' && actionData?.data?.inventory?.id){
+                  navigate(`/app/inventory-add/${actionData?.data?.inventory?.id}`)
                 }
             }
         }
@@ -100,7 +105,7 @@ export default function User() {
     const handleSubmit = () => {
         submit({
             sku,
-            inventory : calculatedInventory > inventory ? calculatedInventory : inventory,
+            inventory : id == 'create' ? inventory : calculatedInventory,
         },
         {
             action: "",
@@ -124,7 +129,7 @@ export default function User() {
                         {id == 'create' ? 'Create' : 'Update'}
                     </Button>
                 }
-                backAction={{ url: "/app/inventories" }}
+                backAction={{ url: "/app/inventory-update" }}
             >
                 <Card>
                   <FormLayout>
@@ -142,6 +147,7 @@ export default function User() {
                         type="number"
                         name="inventory"
                         label="Inventory"
+                        // step={0.1}
                         helpText="Enter inventory of product"
                         value={inventory}
                         onChange={handleInventory}
@@ -153,6 +159,7 @@ export default function User() {
                             type="number"
                             name="inventory"
                             label="Current Inventory"
+                            // step={0.1}
                             value={inventory}
                             disabled
                             suffix="meters"
@@ -163,6 +170,7 @@ export default function User() {
                           <TextField
                             type="number"
                             name="newinventory"
+                            // step={0.1}
                             label="Adjust by new Inventory"
                             value={incommingInventory}
                             onChange={(val) => setIncommingInventory(val)}
@@ -172,7 +180,7 @@ export default function User() {
                         </div>
                         <div style={{marginTop: '10px'}}>
                           {
-                            calculatedInventory > inventory && <Text>Total Inventory : { calculatedInventory }</Text>
+                            <Text>Total Inventory : { calculatedInventory }</Text>
                           }
                         </div>
                         
