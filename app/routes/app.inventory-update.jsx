@@ -20,6 +20,8 @@ export const loader = async ({ request }) => {
         //     return json({ status: "error", message: "There is an issue while fetching users" }, { status: STATUS_CODES.BAD_REQUEST })
         // }
 
+        console.log("inventories", JSON.stringify(inventories, null, 4))
+
         // return json({ data: { users: users ?? [] } }, { status: STATUS_CODES.OK })
         return json({ data: { inventories: inventories ?? [] } }, { status: STATUS_CODES.OK })
     } catch (error) {

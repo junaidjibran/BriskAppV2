@@ -93,12 +93,18 @@ export async function inventoryTransactions({ lineItems, type, orderName }) {
                 return split.includes(item?.size_title)
             })
 
-            // const isLineItemProperties = getSizesDB.find(item => item)
+            // find target size in lineitem properties
+            const isLineItemProperties = getSizesDB.find(size => {
+                const findProp = lineitem?.properties.find(prop => sizeKeys.includes(prop?.name));
+                return size?.size_title === findProp?.value;
+            });
+
 
             if (isVariantOptionSize) {
                 getTargetSize = isVariantOptionSize
-            } else {
-                console.log("")
+            } else if (isLineItemProperties){
+                // console.log("")
+                getTargetSize = isLineItemProperties
             }
 
             if (getTargetSize) {
@@ -133,17 +139,14 @@ export async function inventoryTransactions({ lineItems, type, orderName }) {
                             sku: lineitem?.sku,
                             type: type,
                             order_name: orderName,
-                            inventory: subtractInventory?.toString()
+                            inventory: subtractInventory?.toString(),
+                            current_inventory: updateRemainingInventory?.inventory
                         }
                     }) 
                     console.log("setInventoryTransactionLog", setInventoryTransactionLog)
-
                 }
             }            
         }
-        // console.log("getSizesDB", getSizesDB);
-
-        return false
     } catch (error) {
         console.error('ERROR: inventoryTransactions() :: Controller => inventory.controller ::: Catch ::: ', error)
     }

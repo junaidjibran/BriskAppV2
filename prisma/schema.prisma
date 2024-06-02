@@ -119,6 +119,7 @@ model inventory_transactions {
   sku       String
   type      TransactionType
   inventory String
+  current_inventory String?
   order_name String
   createdAt DateTime        @default(now())
 }
