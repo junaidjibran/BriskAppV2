@@ -24,6 +24,7 @@ import CustomBadge from "../components/badge";
 import { STATUS_CODES } from "../helpers/response";
 import NotLoggedInScreen from "../components/notLoggedInScreen";
 import { loggedInCheck } from "../controllers/users.controller";
+import AccessScreen from "../components/accessScreen";
 
 export const loader = async ({ request, params }) => {
 	try {
@@ -122,7 +123,16 @@ export const loader = async ({ request, params }) => {
 		}
 		// console.log("orders Response==============================================", JSON.stringify(shopifyOrder, null, 4))
 
-		return json({ data: { order: shopifyOrder, factories: factories } }, { status: STATUS_CODES.OK });
+		return json(
+			{ 
+				data: { 
+					order: shopifyOrder, 
+					factories: factories,
+					scopes: isLoggedIn?.access, 
+                    isAdmin: isLoggedIn?.is_admin
+				} 
+			}, 
+			{ status: STATUS_CODES.OK });
 	} catch (error) {
 		console.error("Loader error:", error);
 		return json({ error: "An error occurred during loading data." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
@@ -272,8 +282,21 @@ export default function OrderDetail() {
 	if (loadedData?.status === "NOT_LOGGED_IN") {
         return (
             <>
-                { nav.state === 'loading' ? <Loader /> : null }
-                <NotLoggedInScreen />
+				<Page title="Order">
+					{ nav.state === 'loading' ? <Loader /> : null }
+					<NotLoggedInScreen />
+				</Page>
+            </>
+        )
+    }
+
+	if (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('view_orders')) {
+        return (
+            <>
+				<Page title="Order">
+					{ nav.state === 'loading' ? <Loader /> : null }
+					<AccessScreen />
+				</Page>
             </>
         )
     }
@@ -285,11 +308,11 @@ export default function OrderDetail() {
 				title={`Order ${orderData?.name}`}
 				backAction={{ url: `/app` }}
 				subtitle={`Created: ${dataTimeFormat(orderData?.createdAt)}`}
-				primaryAction={{
+				primaryAction={ (loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_orders')) ?  {
 					content: 'Save',
 					onAction: updateStatus,
 					loading: isloading
-				}}
+				} : null}
 				secondaryActions={[
 					{
 						content: 'Print order',
@@ -370,6 +393,7 @@ export default function OrderDetail() {
 											placeholder="Select factory"
 											onChange={handleFactory}
 											value={factory}
+											disabled={ !loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('write_orders') }
 										/>
 									</Card>
 									<Card>

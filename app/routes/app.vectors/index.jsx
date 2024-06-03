@@ -14,6 +14,7 @@ import NotLoggedInScreen from "../../components/notLoggedInScreen";
 import { authenticate } from "../../shopify.server";
 import { loggedInCheck } from "../../controllers/users.controller";
 import { STATUS_CODES } from "../../helpers/response";
+import AccessScreen from "../../components/accessScreen";
 
 export async function action({ request }) {
     const formData = await request.formData();
@@ -99,7 +100,17 @@ export async function loader({ request }) {
             return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
 
-        return json({ data: await prismaGetVector() });
+        const getVectors = await prismaGetVector()
+
+        return json(
+            { 
+                data:  {
+                    vectors: getVectors,
+                    scopes: isLoggedIn?.access, 
+                    isAdmin: isLoggedIn?.is_admin
+                }
+            },
+            { status: STATUS_CODES.OK })
         
     } catch (error) {
         return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
@@ -180,7 +191,7 @@ export default function Vectors() {
     useEffect(() => {
         console.log('ComponentMount--------', loadedData)
         if (loadedData) {
-            setVectorsList(loadedData?.data)
+            setVectorsList(loadedData?.data?.vectors)
         }
     }, [loadedData])
 
@@ -418,6 +429,18 @@ export default function Vectors() {
         )
     }
 
+    if (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('view_vectors')) {
+        return (
+            <>
+                <Page title={ pageTitle }>
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <SettingsNav currentRoute={ location } />
+                    <AccessScreen />
+                </Page>
+            </>
+        )
+    }
+
 
     return (
         <>
@@ -428,7 +451,7 @@ export default function Vectors() {
                     { vectorsList && vectorsList.length ?
                     <ResourceList
                     resourceName={{ singular: 'Vector', plural: 'Vectors' }}
-                    alternateTool={<Button onClick={ () => createHandle() }>Add Vector</Button>}
+                    alternateTool={ (loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_vectors')) ? <Button onClick={ () => createHandle() }>Add Vector</Button> : null}
                     items={ vectorsList }
                     
                     renderItem={(item) => {
@@ -440,7 +463,7 @@ export default function Vectors() {
                             // @ts-ignore
                             alt={value_english}
                         />;
-                        const shortcutActions = [
+                        const shortcutActions = (loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_vectors')) ? [
                             {
                                 content: 'Edit',
                                 // @ts-ignore
@@ -453,7 +476,7 @@ export default function Vectors() {
                                 onAction: () => delHandle(item),
                                 icon: DeleteIcon,
                             },
-                        ]
+                        ] : []
 
                         return (
                             <
@@ -487,7 +510,7 @@ export default function Vectors() {
                         (
                             <EmptyState
                                 heading="Add New Vector"
-                                action={{content: 'Add', onAction: createHandle}}
+                                action={{content: 'Add', onAction: createHandle, disabled: (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('write_vectors'))}}
                                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                             >
                             </EmptyState>

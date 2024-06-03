@@ -101,17 +101,32 @@ model users {
 model meters_per_size {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   size_title   String   @unique
-  cloth_meters Int   
+  cloth_meters String
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 }
 
 model inventory {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  sku          String   @unique
-  inventory    Int   
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  sku        String   @unique
+  inventory  String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model inventory_transactions {
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  sku       String
+  type      TransactionType
+  inventory String
+  current_inventory String?
+  order_name String
+  createdAt DateTime        @default(now())
+}
+
+enum TransactionType {
+  ADD
+  REMOVE
 }
 
 enum VectorType {

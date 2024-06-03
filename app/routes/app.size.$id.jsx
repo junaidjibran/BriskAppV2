@@ -4,17 +4,31 @@ import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
 import { createSize, updateSize, getSize } from "../controllers/sizes.controller"
 import Loader from "../components/loader"
-import { inventorySizes } from "../constants/inventorySizes"
+import { inventorySizes } from "../constants/inventory"
+import NotLoggedInScreen from "../components/notLoggedInScreen"
+import AccessScreen from "../components/accessScreen"
+import { authenticate } from "../shopify.server"
+import { loggedInCheck } from "../controllers/users.controller"
 
 export const loader = async ({ request, params }) => {
     try {
+        const { sessionToken } = await authenticate.admin(request);
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+
         const sizeId = params.id
         if (!sizeId) {
             return json({ status: "error", message: "InValid sizs ID" }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
         if (sizeId === 'create') {
-            return json({ data: { size: null } }, { status: STATUS_CODES.OK })
+            return json({ data: { 
+                size: null,
+                scopes: isLoggedIn?.access, 
+                    isAdmin: isLoggedIn?.is_admin
+             } }, { status: STATUS_CODES.OK })
         }
 
         const checkSize = await getSize({ sizeId });
@@ -22,7 +36,11 @@ export const loader = async ({ request, params }) => {
             return json({ status: "error", message: "Size not found." }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
-        return json({ data: { size: checkSize } }, { status: STATUS_CODES.OK })
+        return json({ data: { 
+            size: checkSize, 
+            scopes: isLoggedIn?.access, 
+            isAdmin: isLoggedIn?.is_admin 
+        } }, { status: STATUS_CODES.OK })
     } catch (error) {
         return json({ error: JSON.stringify(error), status: "error", message: "Something went wrong..." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -42,13 +60,16 @@ export const action = async ({ request, params }) => {
 
         if (sizeId == 'create') {
             const newSize = await createSize({ size, meters });
-            return json({ data: { size: newSize ?? null }, status: 'success', message: "Size created successfully." }, { status: STATUS_CODES.OK })
+            if (!newSize) {
+                return json({ status: "error", message: "There is an issue while creating size" }, { status: STATUS_CODES.BAD_REQUEST })
+            }
+            return json({ data: { size: newSize }, status: 'success', message: "Size created successfully." }, { status: STATUS_CODES.OK })
         }
 
         const sizeResp = await updateSize({ sizeId, size, meters });
 
         if (!sizeResp) {
-            return json({ status: "error", message: "There is an issue while fetching size" }, { status: STATUS_CODES.BAD_REQUEST })
+            return json({ status: "error", message: "There is an issue while updading size" }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
         return json({ data: { size: sizeResp ?? null }, status: 'success', message: "Update size successfully." }, { status: STATUS_CODES.OK })
@@ -108,7 +129,7 @@ export default function Size() {
 
             if (actionData?.status === 'success') {
                 shopify.toast.show(actionData?.message, { isError: false });
-                if (id == 'create') {
+                if (id === 'create' && actionData?.data?.size?.id) {
                     navigate(`/app/size/${actionData?.data?.size?.id}`)
                 }
             }
@@ -120,9 +141,11 @@ export default function Size() {
         const validationErrors = validateForm();
         if (Object.keys(validationErrors).length) return
 
+        console.log("sizeData", sizeData)
+
         submit({
             size: sizeData?.size,
-            meters: sizeData?.meters
+            meters: sizeData?.meters?.toString()
         },
         {
             action: "",
@@ -143,6 +166,28 @@ export default function Size() {
         setErrors(newErrors);
         return newErrors;
     };
+
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <>
+                <Page title="Update size">
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <NotLoggedInScreen />
+                </Page>
+            </>
+        )
+    }
+
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_invendtory_settings')) {
+        return (
+            <>
+                <Page title="Update size">
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <AccessScreen />
+                </Page>
+            </>
+        )
+    }
 
     return (
         <>
@@ -189,6 +234,7 @@ export default function Size() {
                             label="Meters*"
                             helpText="Enter size of cloth in meters"
                             value={sizeData.meters}
+                            step={0.1}
                             onChange={ (value) => handleForm('meters', value) }
                             error={errors?.meters ?? ""}
                         />

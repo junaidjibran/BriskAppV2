@@ -7,9 +7,20 @@ import { getInventories, deleteInventory } from "../controllers/inventory.contro
 import Loader from "../components/loader"
 import NotLoggedInScreen from "../components/notLoggedInScreen"
 import InventoryNav from "../components/InventoryNav"
+import { authenticate } from "../shopify.server"
+import { loggedInCheck } from "../controllers/users.controller"
+import AccessScreen from "../components/accessScreen"
 
 export const loader = async ({ request }) => {
     try {
+
+        const { sessionToken } = await authenticate.admin(request);
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+
         const inventories = await getInventories();
         // const deleteSessionIfNotLogin = await deleteSession(request)
         // if (deleteSessionIfNotLogin) {
@@ -20,8 +31,14 @@ export const loader = async ({ request }) => {
         //     return json({ status: "error", message: "There is an issue while fetching users" }, { status: STATUS_CODES.BAD_REQUEST })
         // }
 
+        console.log("inventories", JSON.stringify(inventories, null, 4))
+
         // return json({ data: { users: users ?? [] } }, { status: STATUS_CODES.OK })
-        return json({ data: { inventories: inventories ?? [] } }, { status: STATUS_CODES.OK })
+        return json({ data: { 
+            inventories: inventories ?? [],
+            scopes: isLoggedIn?.access, 
+            isAdmin: isLoggedIn?.is_admin
+         } }, { status: STATUS_CODES.OK })
     } catch (error) {
         return json({ error: JSON.stringify(error), status: "error", message: "Something went wrong..." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -90,9 +107,33 @@ export default function Inventory() {
         })
     }
 
+    // if (loaderData?.status === "NOT_LOGGED_IN") {
+    //     return (
+    //         <NotLoggedInScreen />
+    //     )
+    // }
+
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <>
+                <Page title="Update Inventory">
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <InventoryNav currentRoute={ location } />
+                    <NotLoggedInScreen />
+                </Page>
+            </>
+        )
+    }
+
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('view_inventory')) {
+        return (
+            <>
+                <Page title="Update Inventory">
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <InventoryNav currentRoute={ location } />
+                    <AccessScreen />
+                </Page>
+            </>
         )
     }
 
@@ -107,14 +148,14 @@ export default function Inventory() {
                 <InventoryNav currentRoute={ location } />
                 <Card>
                     <ResourceList
-                        alternateTool={<Button onClick={() => navigate('/app/inventory/create')}>Add New</Button>}
+                        alternateTool={ (loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_inventory')) ? <Button onClick={() => navigate('/app/inventory-add/create')}>Add New</Button> : null}
                         resourceName={{ singular: 'inventory', plural: 'inventories' }}
                         items={inventories}
                         emptyState={
                             (
                                 <EmptyState
                                     heading="No found"
-                                    action={{ content: 'Add New', onAction: () => navigate('/app/inventory/create') }}
+                                    action={{ content: 'Add New', onAction: () => navigate('/app/inventory-add/create'), disabled: (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_inventory')) }}
                                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                                 >
                                 </EmptyState>
@@ -122,11 +163,11 @@ export default function Inventory() {
                         }
                         renderItem={(inventory) => {
                             const { id, sku , inventory : currentInventory } = inventory;
-                            const shortcutActions = [
+                            const shortcutActions = (loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_inventory')) ? [
                                 {
                                     content: 'Adjust',
                                     icon: EditIcon,
-                                    onAction: () => { navigate(`/app/inventory/${ id }`) }
+                                    onAction: () => { navigate(`/app/inventory-add/${ id }`) }
                                 },
                                 {
                                     content: 'Delete',
@@ -136,7 +177,7 @@ export default function Inventory() {
                                         setSelectedItem(id)
                                      }
                                 }
-                            ]
+                            ] : []
 
                             return (
                                 <ResourceItem

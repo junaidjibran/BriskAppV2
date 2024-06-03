@@ -15,6 +15,7 @@ import Loader from '../components/loader';
 import NotLoggedInScreen from "../components/notLoggedInScreen.jsx";
 import { loggedInCheck } from "../controllers/users.controller.js";
 import { STATUS_CODES } from "../helpers/response.js";
+import AccessScreen from "../components/accessScreen.jsx";
 
 export async function loader({ request, params }) {
     try {
@@ -34,7 +35,7 @@ export async function loader({ request, params }) {
 
         const shopshirt = await prisma.shop_shirt.findUnique({
             where: {
-                shop: session.shop,
+                shop: session?.shop,
                 id: shopshirtId,
             },
         })
@@ -68,25 +69,38 @@ export async function loader({ request, params }) {
 
         console.log('--------vectorsData', shopshirt);
 
-        return json({ shopshirt, vectorsData })
+        return json(
+            {
+                data: {
+                    shopshirt,
+                    vectorsData,
+                    scopes: isLoggedIn?.access,
+                    isAdmin: isLoggedIn?.is_admin
+                }
+            },
+            { status: STATUS_CODES.OK }
+        )
+        // return json({ shopshirt, vectorsData })
     } catch (error) {
         return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
 }
 
 export async function action({ request, params }) {
-    const formData = await request.formData();
-    const shopshirtId = params.shopshirtId
-    const productId = formData.get('product');
-    const vectors = formData.get('vectors');
-
-    if (!productId || !vectors) return json({ err: 'Missing product or vectors' });
-
-    console.log('--------product', productId, vectors);
-
     try {
+        const formData = await request.formData();
+        const shopshirtId = params.shopshirtId
+        const productId = formData.get('product');
+        const vectors = formData.get('vectors');
+
+        if (!productId || !vectors) {
+            return json({ status: "error", message: "Missing product or vectors" }, { status: STATUS_CODES.BAD_REQUEST });
+        }
+
+        // console.log('--------product', productId, vectors);
         const { session } = await authenticate.admin(request);
-        let res = await prisma.shop_shirt.update({
+
+        const res = await prisma.shop_shirt.update({
             where: {
                 id: shopshirtId,
                 shop: session.shop
@@ -96,14 +110,16 @@ export async function action({ request, params }) {
                 "vectors_ids": vectors.split(','),
             }
         })
-        return json({ success: true, res, action: 'create' });
+
+        return json({ data: res, status: "success", message: "Shopshirt update success." });
     }
-    catch (err) {
-        let msg = 'something went wrong';
-        if (err?.meta?.target == "shop_shirt_product_id_key") {
-            msg = "Vectors against this product already exist"
-        }
-        return json({ success: false, err, action: 'create', msg });
+    catch (error) {
+        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+        // let msg = 'something went wrong';
+        // if (err?.meta?.target == "shop_shirt_product_id_key") {
+        //     msg = "Vectors against this product already exist"
+        // }
+        // return json({ success: false, err, action: 'create', msg });
     }
 }
 
@@ -121,44 +137,64 @@ export default function ShopShirtDetail() {
     console.log('--------actionData', actionData);
 
     useEffect(() => {
-        if (loaderData?.shopshirt?.vectors_ids) {
-            setSelectedItems(loaderData?.shopshirt?.vectors_ids)
+        if (loaderData?.data?.shopshirt?.vectors_ids) {
+            setSelectedItems(loaderData?.data?.shopshirt?.vectors_ids)
         }
-        if (loaderData?.shopshirt?.product) {
-            setSelectedProducts([loaderData?.shopshirt?.product])
+        if (loaderData?.data?.shopshirt?.product) {
+            setSelectedProducts([loaderData?.data?.shopshirt?.product])
         }
     }, [loaderData])
 
     useEffect(() => {
-        if (actionData?.success == false && actionData?.msg) {
-            setErrors([actionData.msg]);
-            setTimeout(() => {
-                setErrors([])
-            }, 5000);
-        }
+        if (actionData && actionData?.status?.length) {
+            if (actionData?.status === 'error') {
+                shopify.toast.show(actionData?.message, { isError: true });
+            }
 
+            if (actionData?.status === 'success') {
+                shopify.toast.show(actionData?.message, { isError: false });
+                // navigate(`/app/shopshirt/${actionData?.data?.id}`);
+            }
+        }
     }, [actionData])
 
-    useEffect(() => {
-        console.log({ selectedProducts })
-    }, [selectedProducts])
+    // useEffect(() => {
+    //     console.log({ selectedProducts })
+    // }, [selectedProducts])
 
     async function selectProduct() {
         const products = await window.shopify.resourcePicker({
+            // type: "product",
+            // multiple: false,
+            // filter: {
+            //     variants: false
+            // },
+            // action: "select",
+            // query: selectedProducts?.productTitle,
+            // // selectionIds: [selectedProducts?.id]
+
             type: "product",
             multiple: false,
             action: "select",
-            query: selectedProducts[0].productTitle,
-            selectionIds: selectedProducts,
+            filter: {
+                variants: false
+            },
+            query: selectedProducts[0]?.productTitle ?? "",
+            selectionIds: selectedProducts?.map(item => {
+                return { id: item?.id }
+            }) ?? [],
         });
+
+
+        console.log("products", products)
 
         if (products) {
             console.log(products)
             const allSelectedProducts = products.map(product => {
-                const { images, id, variants, title, handle } = product;
+                const { images, id, title, handle } = product;
                 return {
                     id: id,
-                    productVariantId: variants[0].id,
+                    // productVariantId: variants[0].id,
                     productTitle: title,
                     productHandle: handle,
                     productAlt: images[0]?.altText,
@@ -170,7 +206,15 @@ export default function ShopShirtDetail() {
     }
 
     const updateShopShirt = () => {
-        if (!selectedProducts.length || !selectedItems.length) return
+        if (!selectedProducts.length) {
+            shopify.toast.show("Please select product.", { isError: true });
+            return false;
+        }
+        if(!selectedItems.length) {
+            shopify.toast.show("Please select any vector.", { isError: true });
+            return false; 
+        }
+        // if (!selectedProducts.length || !selectedItems.length) return
         submit({
             product: selectedProducts[0]?.id,
             vectors: selectedItems
@@ -185,7 +229,19 @@ export default function ShopShirtDetail() {
 
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <>
+                { nav.state === 'loading' ? <Loader /> : null }
+                <NotLoggedInScreen />
+            </>
+        )
+    }
+
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_shopshirt')) {
+        return (
+            <>
+                { nav.state === 'loading' ? <Loader /> : null } 
+                <AccessScreen />
+            </>
         )
     }
 
@@ -219,17 +275,17 @@ export default function ShopShirtDetail() {
                 }
 
                 <BlockStack gap="300">
-                    {
-                        selectedProducts?.length > 0 ? selectedProducts.map(item => {
-                            let productImage = item?.productImage
-                            let productTitle = item?.productTitle
-                            let productAlt = item?.productAlt
+                    <Card>
+                        <InlineStack align="space-between">
+                            <div>
+                                {
+                                    selectedProducts?.length > 0 ? selectedProducts.map(item => {
+                                        let productImage = item?.productImage
+                                        let productTitle = item?.productTitle
+                                        let productAlt = item?.productAlt
 
-                            return (
-                                <div key={item?.id}>
-                                    <Card>
-                                        <InlineStack align="space-between">
-                                            <div>
+                                        return (
+                                            <div key={item?.id}>
                                                 <InlineStack wrap={false} gap="400" blockAlign='start' margin-left="100px">
                                                     <Thumbnail
                                                         source={productImage}
@@ -244,19 +300,19 @@ export default function ShopShirtDetail() {
 
                                                 </InlineStack>
                                             </div>
-                                            <div>
-                                                <Button onClick={selectProduct}>Change Product</Button>
-                                            </div>
-                                        </InlineStack>
-                                    </Card>
-                                </div>
-                            )
-                        }) : (
-                            <Card>
-                                <h1>No product Selected</h1>
-                            </Card>
-                        )
-                    }
+                                        )
+                                    }) : (
+                                        <Card>
+                                            <h1>No product Selected</h1>
+                                        </Card>
+                                    )
+                                }
+                            </div>
+                            <div>
+                                <Button onClick={selectProduct}>Change Product</Button>
+                            </div>
+                        </InlineStack>
+                    </Card>
 
                     {
                         <Card>
@@ -277,7 +333,7 @@ export default function ShopShirtDetail() {
                             <ResourceList
                                 resourceName={{ singular: "Vector", plural: "Vectors" }}
                                 selectable
-                                items={loaderData?.vectorsData}
+                                items={loaderData?.data?.vectorsData}
                                 selectedItems={selectedItems}
                                 onSelectionChange={setSelectedItems}
                                 renderItem={(item) => {

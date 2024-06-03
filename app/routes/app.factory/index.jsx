@@ -26,6 +26,7 @@ import NotLoggedInScreen from '../../components/notLoggedInScreen';
 import { STATUS_CODES } from '../../helpers/response';
 import { loggedInCheck } from '../../controllers/users.controller';
 import { authenticate } from '../../shopify.server';
+import AccessScreen from '../../components/accessScreen';
 
 export async function loader({request}) {
     try {
@@ -37,7 +38,17 @@ export async function loader({request}) {
         }
 
         const statuses = await prisma.factories.findMany();
-        return json(statuses)
+        // return json(statuses)
+        return json(
+            {
+                data: {
+                    statuses,
+                    scopes: isLoggedIn?.access,
+                    isAdmin: isLoggedIn?.is_admin
+                },
+            },
+            { status: STATUS_CODES.OK }
+        )
     } catch (error) {
         return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -93,7 +104,7 @@ export async function action({ request }) {
 
 
 export default function FactorySetting() {
-    const data = useLoaderData();
+    const loaderData = useLoaderData();
     const submit = useSubmit();
     const nav = useNavigation();
     const actionData = useActionData();
@@ -126,10 +137,10 @@ export default function FactorySetting() {
     );
 
     useEffect(() => {
-        if (data) {
-            setitems(data)
+        if (loaderData) {
+            setitems(loaderData?.data?.statuses)
         }
-    }, [data])
+    }, [loaderData])
 
     useEffect(() => {
         if (actionData) {
@@ -268,7 +279,7 @@ export default function FactorySetting() {
 
     const pageTitle = "Factory"
 
-    if (data?.status === "NOT_LOGGED_IN") {
+    if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
             <>
                 <Page title={ pageTitle }>
@@ -280,67 +291,74 @@ export default function FactorySetting() {
         )
     }
 
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('view_factory')) {
+        return (
+            <>
+                <Page title={pageTitle}>
+                    {nav.state === 'loading' ? <Loader /> : null}
+                    <SettingsNav currentRoute={routeLocation} />
+                    <AccessScreen />
+                </Page>
+            </>
+        )
+    }
+
     return (
         <>
         {nav.state === 'loading' ? <Loader/> : null}
             <Page title="Factory">
                 <SettingsNav currentRoute={ routeLocation } />
                 <Card>
-                    {
-                        items && items.length ? (
-                            <ResourceList
-                                alternateTool={ <Button onClick={ () => openModal('create') }>Add New</Button> }
-                                resourceName={{ singular: 'factory', plural: 'factories' }}
-                                items={ items }
-                                renderItem={(item) => {items
-                                    const { id, title, location } = item;
-                                    const shortcutActions = [
-                                        {
-                                            content: 'Edit',
-                                            icon: EditIcon,
-                                            onAction: () => openModal('update', item)
-                                        },
-                                        {
-                                            content: 'Delete',
-                                            icon: DeleteIcon,
-                                            onAction: () => handleConfirmationPopup(item)
-                                        }
-                                    ]
-
-                                    return (
-                                        <
-                                        // @ts-ignore
-                                        ResourceItem
-                                            id={id}
-                                            shortcutActions={shortcutActions}
-                                            persistActions
-                                        >
-                                            <Text variant="bodyMd" fontWeight="bold" as="h3">
-                                                {title}
-                                            </Text>
-                                            <div>
-                                                { location }
-                                            </div>
-                                        </ResourceItem>
-                                    );
-                                }}
-                            />
-                        ) : (
-                            <Card>
-                                <EmptyState
+                    <ResourceList
+                        alternateTool={ loaderData?.data?.scopes?.includes('write_factory') ?  <Button onClick={ () => openModal('create') }>Add New</Button> : null }
+                        resourceName={{ singular: 'factory', plural: 'factories' }}
+                        items={ items }
+                        emptyState={
+                            <EmptyState
                                     heading="Add a city list to get started"
                                     action={{
                                         content: 'Add New',
-                                        onAction: () => openModal('create')
+                                        onAction: () => openModal('create'),
+                                        disabled: !loaderData?.data?.scopes?.includes('write_factory')
                                     }}
                                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                                 >
                                     <p>It looks like you haven't added any cities for any country yet. Click the "Add New" button to creating your city list.</p>
                                 </EmptyState>
-                            </Card>
-                        )
-                    }
+                        }
+                        renderItem={(item) => {
+                            const { id, title, location } = item;
+                            const shortcutActions = loaderData?.data?.scopes?.includes('write_factory') ? [
+                                {
+                                    content: 'Edit',
+                                    icon: EditIcon,
+                                    onAction: () => openModal('update', item)
+                                },
+                                {
+                                    content: 'Delete',
+                                    icon: DeleteIcon,
+                                    onAction: () => handleConfirmationPopup(item)
+                                }
+                            ] : []
 
+                            return (
+                                <
+                                // @ts-ignore
+                                ResourceItem
+                                    id={id}
+                                    shortcutActions={shortcutActions}
+                                    persistActions
+                                >
+                                    <Text variant="bodyMd" fontWeight="bold" as="h3">
+                                        {title}
+                                    </Text>
+                                    <div>
+                                        { location }
+                                    </div>
+                                </ResourceItem>
+                            );
+                        }}
+                    />
                 </Card>
                 <Modal
                     open={active}

@@ -2,6 +2,8 @@ import { STATUS_CODES } from "../helpers/response";
 import { authenticate } from "../shopify.server";
 // import { createOrderTagLog } from "~/controllers/ordertagging";
 import { orderCreation } from "../controllers/ordersController";
+import { inventoryTransactions } from "../controllers/inventory.controller";
+// import { inventoryTransactions } from "../controllers/inventory.controller";
 // import { appSubscriptionUpdated } from "~/controllers/subscriptionController";
 
 const TARGET_COLLECTION = {
@@ -25,17 +27,15 @@ export const action = async ({ request }) => {
 	// console.log('---------subs called 2')
 	try {
 		if (shop && payload) {
-			console.log("Shopify webhook order payload", shop, JSON.stringify(payload, null, 4));
 			console.log("has Session-------------------")
 			const statusArray = [];
 			const payloadLineItems = payload?.line_items;
+			console.log("Shopify webhook order payload", shop, JSON.stringify(payloadLineItems, null, 4));
 
 			for (let index = 0; index < payloadLineItems.length; index++) {
 				const lineItem = payloadLineItems[index];
-				const getResp = await admin.graphql.query({
-					data: {
-						query: `#graphql 
-							query getProduct($id: ID!) {
+				const getResp = await admin.graphql(`#graphql 
+						query getProduct($id: ID!) {
 							product(id: $id) {
 								title
 								handle
@@ -45,20 +45,22 @@ export const action = async ({ request }) => {
 									}
 								}
 							}
-						}`,
+						}`, {
 						variables: {
 							"id": `gid://shopify/Product/${lineItem?.product_id}`
 						}
 					}
-				});
-				const getProductData = getResp.body;
+				);
+
+				const getProductData = await getResp.json();
+				// console.log(getProductData)
 				const collectionsHandles = getProductData?.data?.product?.collections?.nodes.map(handle => handle.handle) ?? []
-				console.log("getResp --- get Product API", JSON.stringify(collectionsHandles, null, 4))
+				// console.log("getResp --- get Product API", JSON.stringify(collectionsHandles, null, 4))
 				if (
 					collectionsHandles &&
 					collectionsHandles.length &&
 					(collectionsHandles.includes(TARGET_COLLECTION.order_custom_size) || collectionsHandles.includes(TARGET_COLLECTION.shop_shirt))) {
-					console.log("This order is from target collection and need to apply tag on current order");
+					// console.log("This order is from target collection and need to apply tag on current order");
 					statusArray.push(true);
 				} else {
 					statusArray.push(false);
@@ -96,7 +98,14 @@ export const action = async ({ request }) => {
 				}
 				console.log("payload-------------", JSON.stringify(tempPayload, null, 4))
 				const dbCall = await orderCreation({ orderID, orderName, lineItems, shop, createdAt });
+				
 				console.log("DB call for save order Data-==-=--=-=-=-=-=-=-=-=-=-=-=-=", JSON.stringify(dbCall, null, 4));
+
+				if (dbCall) {
+					const inventoryTransaction = await inventoryTransactions({ lineItems, type: "REMOVE", orderName })
+					console.log("inventoryTransaction-==-=--=-=-=-=-=-=-=-=-=-=-=-=", JSON.stringify(inventoryTransaction, null, 4));
+				}
+
 				// const getOrderTags = await admin.graphql.query({
 				// 	data: {
 				// 		query: `#graphql 

@@ -205,13 +205,19 @@ export default function ManageUsers() {
 
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <Page title="Manage Users">
+                {isPageLoading && (<Loader />)}
+                <NotLoggedInScreen />
+            </Page>
         )
     }
 
     if (!loaderData?.data?.isAdmin) {
         return (
-            <AccessScreen />
+            <Page title="Manage Users">
+                {isPageLoading && (<Loader />)}
+                <AccessScreen />
+            </Page>
         )
     }
 

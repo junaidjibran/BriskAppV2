@@ -11,12 +11,21 @@ import Loader from "../components/loader"
 import { authenticate } from "../shopify.server"
 import { hasNextPage, hasPreviousPage } from "../controllers/paginationController"
 import InventoryNav from "../components/InventoryNav"
+import { loggedInCheck } from "../controllers/users.controller"
+import SettingsNav from "../components/settingsNav"
+import NotLoggedInScreen from "../components/notLoggedInScreen"
+import AccessScreen from "../components/accessScreen"
 // import { deleteSession } from "../helpers/session.server"
 
 export const loader = async ({ request }) => {
     try {
-        const { session } = await authenticate.admin(request);
+        const { session, sessionToken } = await authenticate.admin(request);
         const shop = session?.shop
+
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
 
         // console.log('===========sizes', sizes)
 
@@ -65,9 +74,9 @@ export const loader = async ({ request }) => {
         // const getOrderCall = await prisma.shopify_orders.findMany(query)
         const sizes = await getSizes({ query });
 
-        if (!sizes.length) {
-            return json({ message: "No Size found in APP" }, { status: STATUS_CODES.NOT_FOUND })
-        }
+        // if (!sizes.length) {
+        //     return json({ message: "No Size found in APP" }, { status: STATUS_CODES.NOT_FOUND })
+        // }
         // jsonLogs(getOrderCall.length, "getOrderCall---------------");
 
         if (sizes?.length === defaultLimit) {
@@ -87,7 +96,17 @@ export const loader = async ({ request }) => {
             pagination['count'] = sizes.length
         }
 
-        return json({ data: { sizes: sizes ?? [], pageInfo: pagination } }, { status: STATUS_CODES.OK })
+        return json(
+            { 
+                data: 
+                { 
+                    sizes: sizes ?? [], 
+                    pageInfo: pagination,
+                    scopes: isLoggedIn?.access, 
+                    isAdmin: isLoggedIn?.is_admin
+                } 
+            },
+            { status: STATUS_CODES.OK })
     } catch (error) {
         return json({ error: JSON.stringify(error), status: "error", message: "Something went wrong..." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -125,6 +144,8 @@ export default function MetersPerSize() {
     const [selectedItem, setSelectedItem] = useState(null);
     const [sizes, setsizes] = useState([])
     const [pageinfo, setPageInfo] = useState(null);
+    const pageTitle = "Meter per Size"
+
 
     useEffect(() => {
         if (loaderData?.status === "error") {
@@ -173,6 +194,30 @@ export default function MetersPerSize() {
     //     )
     // }
 
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <>
+                <Page title={ pageTitle }>
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <InventoryNav currentRoute={ location } />
+                    <NotLoggedInScreen />
+                </Page>
+            </>
+        )
+    }
+
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('view_invendtory_settings')) {
+        return (
+            <>
+                <Page title={ pageTitle }>
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <InventoryNav currentRoute={ location } />
+                    <AccessScreen />
+                </Page>
+            </>
+        )
+    }
+
     return (
         <>
             {isPageLoading && (<Loader />)}
@@ -182,14 +227,14 @@ export default function MetersPerSize() {
                 <InventoryNav currentRoute={ location } />
                 <Card>
                     <ResourceList
-                        alternateTool={<Button onClick={() => navigate('/app/size/create')}>Add New</Button>}
+                        alternateTool={ (loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_inventory_settings')) ? <Button onClick={() => navigate('/app/size/create')}>Add New</Button> : null}
                         resourceName={{ singular: 'size', plural: 'sizes' }}
                         items={sizes}
                         emptyState={
                             (
                                 <EmptyState
                                     heading="No Sizes found"
-                                    action={{ content: 'Add New', onAction: () => navigate('/app/size/create') }}
+                                    action={{ content: 'Add New', onAction: () => navigate('/app/size/create'), disabled: (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_inventory_settings')) }}
                                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                                 >
                                 </EmptyState>
@@ -197,7 +242,7 @@ export default function MetersPerSize() {
                         }
                         renderItem={(size) => {
                             const { id, size_title: sizeTitle, cloth_meters: meters } = size;
-                            const shortcutActions = [
+                            const shortcutActions = (loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_inventory_settings')) ? [
                                 {
                                     content: 'Edit',
                                     icon: EditIcon,
@@ -211,7 +256,7 @@ export default function MetersPerSize() {
                                         setSelectedItem(id)
                                     }
                                 }
-                            ]
+                            ] : []
 
                             return (
                                 <ResourceItem

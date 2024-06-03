@@ -286,8 +286,10 @@ export default function Orders({ params }) {
     if (loadedData?.status === "NOT_LOGGED_IN") {
         return (
             <>
-                { nav.state === 'loading' ? <Loader /> : null }
-                <NotLoggedInScreen />
+                <Page title="Orders">
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <NotLoggedInScreen />
+                </Page>
             </>
         )
     }
@@ -295,7 +297,10 @@ export default function Orders({ params }) {
     if (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('view_orders')) {
         return (
             <>
-                <AccessScreen />
+                <Page title="Orders">
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <AccessScreen />
+                </Page>
             </>
         )
     }
