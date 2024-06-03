@@ -26,6 +26,7 @@ import { STATUS_CODES } from '../../helpers/response';
 import { authenticate } from '../../shopify.server';
 import { loggedInCheck } from '../../controllers/users.controller';
 import NotLoggedInScreen from '../../components/notLoggedInScreen';
+import AccessScreen from '../../components/accessScreen';
 
 export async function loader({ request }) {
     try {
@@ -36,7 +37,16 @@ export async function loader({ request }) {
             return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
         const statuses = await prisma.manufacturing_status.findMany();
-        return json(statuses)
+        return json(
+            {
+                data: {
+                    statuses,
+                    scopes: isLoggedIn?.access,
+                    isAdmin: isLoggedIn?.is_admin
+                },
+            },
+            { status: STATUS_CODES.OK }
+        )
     } catch (error) {
         return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -101,19 +111,19 @@ const colorToBackgroundColor = {
     Dark: '#343a40',
     Info: '#17a2b8',
 
-  };
+};
 
 // const colorToBadgeTone = {
 //     Red: 'critical',
 //     Blue: 'info',
 //     Green: 'success',
 //     Yellow: 'attention'
-  
+
 // }
 
 
 export default function StatusSettings() {
-    const data = useLoaderData();
+    const loaderData = useLoaderData();
     const submit = useSubmit();
     const nav = useNavigation();
     const actionData = useActionData();
@@ -126,6 +136,8 @@ export default function StatusSettings() {
     const [selectedItem, setSelectedItem] = useState(null)
     const [items, setitems] = useState([])
     const [showError, setShowError] = useState(false);
+
+    console.log("loaderData", loaderData)
 
     const isLoading = ["loading", "submitting"].includes(nav.state) && nav.formMethod === "POST";
 
@@ -145,10 +157,10 @@ export default function StatusSettings() {
     );
 
     useEffect(() => {
-        if (data) {
-            setitems(data)
+        if (loaderData) {
+            setitems(loaderData?.data?.statuses ?? [])
         }
-    }, [data])
+    }, [loaderData])
 
     useEffect(() => {
         if (actionData) {
@@ -156,7 +168,7 @@ export default function StatusSettings() {
                 shopify.toast.show("Deleted successfully!");
             } else if (actionType === 'update') {
                 shopify.toast.show("Updated successfully!");
-            } else if(actionType === 'create')
+            } else if (actionType === 'create')
                 shopify.toast.show("Created successfully!");
         }
         resetStates();
@@ -281,13 +293,25 @@ export default function StatusSettings() {
     const handleClearButtonClick = useCallback(() => setTextFieldValue(''), []);
     const pageTitle = "Manufacturing Status"
 
-    if (data?.status === "NOT_LOGGED_IN") {
+    if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
             <>
-                <Page title={ pageTitle }>
-                    { nav.state === 'loading' ? <Loader /> : null }
-                    <SettingsNav currentRoute={ location } />
+                <Page title={pageTitle}>
+                    {nav.state === 'loading' ? <Loader /> : null}
+                    <SettingsNav currentRoute={location} />
                     <NotLoggedInScreen />
+                </Page>
+            </>
+        )
+    }
+
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('view_manufactorStatus')) {
+        return (
+            <>
+                <Page title={pageTitle}>
+                    {nav.state === 'loading' ? <Loader /> : null}
+                    <SettingsNav currentRoute={location} />
+                    <AccessScreen />
                 </Page>
             </>
         )
@@ -295,46 +319,44 @@ export default function StatusSettings() {
 
     return (
         <>
-        {nav.state === 'loading' ? <Loader /> : null}
-        <Page title="Manufacturing Status">
-            <SettingsNav currentRoute={ location } />
-            <Card>
-            {
-                    items && items.length ? (
-                <ResourceList
-                    alternateTool={ <Button onClick={ () => openModal('create') }>Add New</Button> }
-                    resourceName={{ singular: 'manufacturing status', plural: 'manufacturing status' }}
-                    items={ items }
-                    renderItem={(item) => {
-                        const { id, title, color } = item;
-                        // @ts-ignore
-                        // const badgeTone = colorToBadgeTone[color] || '';
-                        const backgroundColor = colorToBackgroundColor[color] || '';
-                        const shortcutActions = [
-                            {
-                                content: 'Edit',
-                                icon: EditIcon,
-                                onAction: () => openModal('update', item)
-                            },
-                            {
-                                content: 'Delete',
-                                icon: DeleteIcon,
-                                onAction: () => handleConfirmationPopup(item)
-                            }
-                        ]
+            {nav.state === 'loading' ? <Loader /> : null}
+            <Page title="Manufacturing Status">
+                <SettingsNav currentRoute={location} />
+                <Card>
+                            <ResourceList
+                                alternateTool={(loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_manufactorStatus')) ? <Button onClick={() => openModal('create')}>Add New</Button> : null}
+                                resourceName={{ singular: 'manufacturing status', plural: 'manufacturing status' }}
+                                items={items}
+                                renderItem={(item) => {
+                                    const { id, title, color } = item;
+                                    // @ts-ignore
+                                    // const badgeTone = colorToBadgeTone[color] || '';
+                                    const backgroundColor = colorToBackgroundColor[color] || '';
+                                    const shortcutActions = (loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_manufactorStatus')) ? [
+                                        {
+                                            content: 'Edit',
+                                            icon: EditIcon,
+                                            onAction: () => openModal('update', item)
+                                        },
+                                        {
+                                            content: 'Delete',
+                                            icon: DeleteIcon,
+                                            onAction: () => handleConfirmationPopup(item)
+                                        }
+                                    ] : []
 
-                        return (
-                            <
-                            // @ts-ignore
-                            ResourceItem
-                                id={id}
-                                shortcutActions={shortcutActions}
-                                persistActions
-                            >
+                                    return (
+                                        <
+                                            // @ts-ignore
+                                            ResourceItem
+                                            id={id}
+                                            shortcutActions={shortcutActions}
+                                            persistActions
+                                        >
 
-                                <div>
-                                    <CustomBadge title={ title } color={ backgroundColor } fontSize="14px" />
-                                    {/* <span style={{
+                                            <div>
+                                                <CustomBadge title={title} color={backgroundColor} fontSize="14px" />
+                                                {/* <span style={{
                                         borderRadius: '8px',
                                         backgroundColor,
                                         padding: '2px 10px',
@@ -345,86 +367,81 @@ export default function StatusSettings() {
                                         fontWeight: 500 }}>
                                         {title}
                                     </span> */}
-                                    {/* <Badge tone={badgeTone}>{String(color)}</Badge> */}
-                                </div>
-                            </ResourceItem>
-                        );
+                                                {/* <Badge tone={badgeTone}>{String(color)}</Badge> */}
+                                            </div>
+                                        </ResourceItem>
+                                    );
+                                }}
+                                emptyState={<EmptyState
+                                    heading="No found"
+                                    action={{ content: 'Add New', onAction: () => openModal('create'), disabled: (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_manufactorStatus')) }}
+                                    image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                                >
+                                </EmptyState>}
+                            />
+                </Card>
+                <Modal
+                    open={active}
+                    onClose={closeModal}
+                    title={actionType === 'create' ? 'Add new manufacturing status' : 'update'}
+                    primaryAction={{
+                        content: actionType === 'create' ? 'Add' : actionType === 'update' ? 'Update' : '',
+                        onAction: () => modalPrimaryAction(actionType),
+                        loading: isLoading
                     }}
-                />
-                ) : (
-                    (
-                        <EmptyState
-                            heading="No found"
-                            action={{ content: 'Add New', onAction: () => openModal('create') }}
-                            image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-                        >
-                        </EmptyState>
-                    )
-                )
-            }
-            </Card>
-            <Modal
-                open={active}
-                onClose={closeModal}
-                title={actionType === 'create' ? 'Add new manufacturing status' : 'update'}
-                primaryAction={{
-                    content: actionType === 'create' ? 'Add' : actionType === 'update' ? 'Update' : '',
-                    onAction: () => modalPrimaryAction(actionType),
-                    loading: isLoading
-                }}
-                secondaryActions={[
-                    {
-                        content: 'Cancel',
-                        onAction: closeModal,
-                    },
-                ]}
-            >
-                <Modal.Section>
-                    <FormLayout>
-                        <TextField
-                            label="Status title"
-                            value={textFieldValue}
-                            onChange={handleTextFieldChange}
-                            clearButton
-                            onClearButtonClick={handleClearButtonClick}
-                            autoComplete="off"
-                            placeholder='Add Status title'
-                            error={showError ? 'Status title is required' : undefined}
-                        />
-                        <Select
-                            label="Status color"
-                            options={options}
-                            placeholder="Select status color"
-                            onChange={handleSelectChange}
-                            value={selectColor}
-                        />
-                    </FormLayout>
-                </Modal.Section>
-            </Modal>
+                    secondaryActions={[
+                        {
+                            content: 'Cancel',
+                            onAction: closeModal,
+                        },
+                    ]}
+                >
+                    <Modal.Section>
+                        <FormLayout>
+                            <TextField
+                                label="Status title"
+                                value={textFieldValue}
+                                onChange={handleTextFieldChange}
+                                clearButton
+                                onClearButtonClick={handleClearButtonClick}
+                                autoComplete="off"
+                                placeholder='Add Status title'
+                                error={showError ? 'Status title is required' : undefined}
+                            />
+                            <Select
+                                label="Status color"
+                                options={options}
+                                placeholder="Select status color"
+                                onChange={handleSelectChange}
+                                value={selectColor}
+                            />
+                        </FormLayout>
+                    </Modal.Section>
+                </Modal>
 
-            <Modal
-                open={activeDelete}
-                onClose={toggleDeleteModal}
-                title="Confirm Deletion"
-                primaryAction={{
-                    content: 'Discard',
-                    // @ts-ignore
-                    onAction: () => deleteStatus(selectedItem?.id),
-                    loading: isLoading
-                }}
-                secondaryActions={[
-                    {
-                        content: 'Cancle',
-                        onAction: toggleDeleteModal,
-                    },
-                ]}
-            >
-                <Modal.Section>
-                    Are you sure you want to delete this status? This action cannot be undone.
-                </Modal.Section>
-            </Modal>
-            
-        </Page>
+                <Modal
+                    open={activeDelete}
+                    onClose={toggleDeleteModal}
+                    title="Confirm Deletion"
+                    primaryAction={{
+                        content: 'Discard',
+                        // @ts-ignore
+                        onAction: () => deleteStatus(selectedItem?.id),
+                        loading: isLoading
+                    }}
+                    secondaryActions={[
+                        {
+                            content: 'Cancle',
+                            onAction: toggleDeleteModal,
+                        },
+                    ]}
+                >
+                    <Modal.Section>
+                        Are you sure you want to delete this status? This action cannot be undone.
+                    </Modal.Section>
+                </Modal>
+
+            </Page>
         </>
 
     );

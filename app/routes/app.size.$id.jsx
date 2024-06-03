@@ -5,16 +5,30 @@ import { STATUS_CODES } from "../helpers/response"
 import { createSize, updateSize, getSize } from "../controllers/sizes.controller"
 import Loader from "../components/loader"
 import { inventorySizes } from "../constants/inventory"
+import NotLoggedInScreen from "../components/notLoggedInScreen"
+import AccessScreen from "../components/accessScreen"
+import { authenticate } from "../shopify.server"
+import { loggedInCheck } from "../controllers/users.controller"
 
 export const loader = async ({ request, params }) => {
     try {
+        const { sessionToken } = await authenticate.admin(request);
+        const isLoggedIn = await loggedInCheck({ sessionToken })
+        if (!isLoggedIn) {
+            return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
+        }
+
         const sizeId = params.id
         if (!sizeId) {
             return json({ status: "error", message: "InValid sizs ID" }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
         if (sizeId === 'create') {
-            return json({ data: { size: null } }, { status: STATUS_CODES.OK })
+            return json({ data: { 
+                size: null,
+                scopes: isLoggedIn?.access, 
+                    isAdmin: isLoggedIn?.is_admin
+             } }, { status: STATUS_CODES.OK })
         }
 
         const checkSize = await getSize({ sizeId });
@@ -22,7 +36,11 @@ export const loader = async ({ request, params }) => {
             return json({ status: "error", message: "Size not found." }, { status: STATUS_CODES.BAD_REQUEST })
         }
 
-        return json({ data: { size: checkSize } }, { status: STATUS_CODES.OK })
+        return json({ data: { 
+            size: checkSize, 
+            scopes: isLoggedIn?.access, 
+            isAdmin: isLoggedIn?.is_admin 
+        } }, { status: STATUS_CODES.OK })
     } catch (error) {
         return json({ error: JSON.stringify(error), status: "error", message: "Something went wrong..." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -149,12 +167,34 @@ export default function Size() {
         return newErrors;
     };
 
+    if (loaderData?.status === "NOT_LOGGED_IN") {
+        return (
+            <>
+                <Page title="Update size">
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <NotLoggedInScreen />
+                </Page>
+            </>
+        )
+    }
+
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_invendtory_settings')) {
+        return (
+            <>
+                <Page title="Update size">
+                    { nav.state === 'loading' ? <Loader /> : null }
+                    <AccessScreen />
+                </Page>
+            </>
+        )
+    }
+
     return (
         <>
             {isPageLoading && (<Loader />)}
-            <pre>
+            {/* <pre>
                 { JSON.stringify(sizeData, null, 4) }
-            </pre>
+            </pre> */}
             <Page
                 title={id == 'create' ? 'Create new size' : 'Update size'}
                 primaryAction={

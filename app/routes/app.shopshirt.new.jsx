@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { Banner, BlockStack, Button, Card, InlineStack, Page, ResourceItem, ResourceList, Text, Thumbnail } from "@shopify/polaris";
 import { useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
@@ -14,6 +14,8 @@ import {
 import Loader from '../components/loader';
 import NotLoggedInScreen from "../components/notLoggedInScreen";
 import { loggedInCheck } from "../controllers/users.controller";
+import AccessScreen from "../components/accessScreen";
+import { STATUS_CODES } from "../helpers/response";
 
 export async function loader({request}) {
     try {
@@ -36,40 +38,61 @@ export async function loader({request}) {
     
         console.log('--------vectorsData', vectorsData);
         
-        return json({vectorsData})
+        return json(
+            {
+                data: {
+                    vectorsData,
+                    scopes: isLoggedIn?.access, 
+                    isAdmin: isLoggedIn?.is_admin
+                }
+            },
+            { status: STATUS_CODES.OK }
+        )
         
     } catch (error) {
-        
+        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
 }
 
 export async function action({ request }) {
-    const formData = await request.formData();
-    const productId = formData.get('product');
-    const vectors = formData.get('vectors');
-
-    if(!productId || !vectors) return json({err: 'Missing product and vectors'});
-
-    console.log('--------product', productId, vectors );
     
     try{
+        const formData = await request.formData();
+        const productId = formData.get('product');
+        const vectors = formData.get('vectors');
+    
+        if(!productId || !vectors) {
+            return json({ status: "error", message: 'Missing product and vectors'})
+        };
+    
+        console.log('--------product', productId, vectors );
         const { session } = await authenticate.admin(request);
-        let res = await prisma.shop_shirt.create({
-            data: {
-              "product_id": productId,
-              "vectors_ids": vectors.split(','),
-              "shop": session.shop
-          }
+        const checkShopShirt = await prisma.shop_shirt.findUnique({
+            where: {
+                product_id: productId
+            }
         })
-        console.log('-----action res', res)
-        return json({success: true, res, action: 'create'});
-    }
-    catch(err){
-        let msg = 'something went wrong';
-        if(err?.meta?.target == "shop_shirt_product_id_key"){
-            msg = "Vectors against this product already exist"
+
+        if (checkShopShirt) {
+            return json({ status: "error", message: "Vectors against this product already exist" }, { status: STATUS_CODES.BAD_REQUEST })
         }
-        return json({success: false, err, action: 'create', msg});
+
+        let createShopshirt = await prisma.shop_shirt.create({
+            data: {
+                "product_id": productId,
+                "vectors_ids": vectors?.split(','),
+                "shop": session?.shop
+            }
+        })
+        if (!createShopshirt) {
+            return json({ status: "error", message: "There is an issue while creating shopshirt" }, { status: STATUS_CODES.BAD_REQUEST })
+        }
+        // console.log('-----action res', createShopshirt);
+        return redirect(`/app/shopshirt/${ createShopshirt?.id }`)
+        // return json({ data: { ...createShopshirt }, status: "success", message: "Shopshirt created success",  success: true, res, action: 'create'}, { status: STATUS_CODES.CREATED });
+    }
+    catch(error){
+        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
 
     
@@ -90,26 +113,39 @@ export default function ShopShirtNew() {
     console.log('--------loaderData', loaderData);
     console.log('--------actionData', actionData);
 
+    // useEffect(() => {
+    //     if (actionData?.success == true && actionData?.res?.id) {
+    //         navigate(`/app/shopshirt/${actionData?.res?.id}`);
+    //     }
+
+    //     if (actionData?.success == false && actionData?.msg ) {
+    //         setErrors([actionData.msg]);
+    //         setTimeout(() => {
+    //             setErrors([])
+    //         }, 5000);
+    //     }
+
+    // }, [actionData, navigate])
+
     useEffect(() => {
-        if (actionData?.success == true && actionData?.res?.id) {
-            navigate(`/app/shopshirt/${actionData?.res?.id}`);
-        }
+        if (actionData && actionData?.status?.length) {
+            if (actionData?.status === 'error') {
+                shopify.toast.show(actionData?.message, { isError: true });
+            }
 
-        if (actionData?.success == false && actionData?.msg ) {
-            setErrors([actionData.msg]);
-            setTimeout(() => {
-                setErrors([])
-            }, 5000);
+            if (actionData?.status === 'success') {
+                shopify.toast.show(actionData?.message, { isError: false });
+                // navigate(`/app/shopshirt/${actionData?.data?.id}`);
+            }
         }
-
-    }, [actionData, navigate])
+    }, [actionData])
     
     async function selectProduct() {
         const products = await window.shopify.resourcePicker({
             type: "product",
             multiple: false,
             action: "select",
-            query: "tag:BRISK_APP_shop_shirt",
+            // query: "tag:BRISK_APP_shop_shirt",
             selectionIds: selectedProducts,
         });
 
@@ -143,7 +179,14 @@ export default function ShopShirtNew() {
     // }
 
     const saveShopShirt = () => {
-        if(!selectedProducts.length || !selectedItems.length) return
+        if (!selectedProducts.length) {
+            shopify.toast.show("Please select product.", { isError: true });
+            return false;
+        }
+        if(!selectedItems.length) {
+            shopify.toast.show("Please select any vector.", { isError: true });
+            return false; 
+        }
         console.log(selectedItems, selectedItems )
         submit({
             product : selectedProducts[0]?.id,
@@ -159,7 +202,19 @@ export default function ShopShirtNew() {
 
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
-            <NotLoggedInScreen />
+            <>
+                { nav.state === 'loading' ? <Loader /> : null }
+                <NotLoggedInScreen />
+            </>
+        )
+    }
+
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_shopshirt')) {
+        return (
+            <>
+                { nav.state === 'loading' ? <Loader /> : null } 
+                <AccessScreen />
+            </>
         )
     }
 
@@ -250,7 +305,7 @@ export default function ShopShirtNew() {
                         <ResourceList
                             resourceName={{ singular: "Vector", plural: "Vectors" }}
                             selectable
-                            items={loaderData?.vectorsData}
+                            items={loaderData?.data?.vectorsData}
                             selectedItems={selectedItems}
                             // @ts-ignore
                             onSelectionChange={setSelectedItems}

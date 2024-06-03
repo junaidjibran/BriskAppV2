@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Thumbnail, Modal, Button, Card, Page, ResourceItem, ResourceList, Text, EmptyState} from "@shopify/polaris" ;
+import { Thumbnail, Modal, Button, Card, Page, ResourceItem, ResourceList, Text, EmptyState } from "@shopify/polaris";
 import { ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon } from '@shopify/polaris-icons';
 
 import SettingsNav from "../components/settingsNav";
@@ -20,6 +20,8 @@ import { hasNextPage, hasPreviousPage } from "../controllers/shopshirt_controlle
 import Loader from "../components/loader";
 import NotLoggedInScreen from "../components/notLoggedInScreen.jsx";
 import { loggedInCheck } from "../controllers/users.controller.js";
+import { STATUS_CODES } from "../helpers/response.js";
+import AccessScreen from "../components/accessScreen.jsx";
 
 export async function loader({ request }) {
     const { admin, session, sessionToken } = await authenticate.admin(request);
@@ -102,32 +104,54 @@ export async function loader({ request }) {
         }
     }
 
-    return json({ shopShirtItems, pageInfo: pagination })
+    return json(
+        {
+            data: {
+                shopShirtItems,
+                pageInfo: pagination,
+                scopes: isLoggedIn?.access,
+                isAdmin: isLoggedIn?.is_admin
+            }
+        },
+        { status: STATUS_CODES.OK })
 }
 
 export async function action({ request, params }) {
-    const formData = await request.formData();
-    const toDeleteId = formData.get('toDelete');
-
-
-    if (!toDeleteId) return json({ err: 'Missing productid' });
 
     // console.log('--------toDeleteId', toDeleteId );
 
     try {
-        let res = await prisma.shop_shirt.delete({
-            where: {
-                id: toDeleteId
-            }
-        })
-        return json({ success: true, res, action: 'create' });
-    }
-    catch (err) {
-        let msg = 'something went wrong';
-        if (err?.meta?.target == "shop_shirt_product_id_key") {
-            msg = "Vectors against this product already exist"
+        const formData = await request.formData();
+        const id = formData.get('id');
+
+        switch (request?.method) {
+            case "DELETE":
+                if (!id) {
+                    return json({ status: "error", message: 'Shopshirt id is missing.' }, { status: STATUS_CODES.BAD_REQUEST })
+                };
+                const deleteShopShirt = await prisma.shop_shirt.delete({
+                    where: {
+                        id: id
+                    }
+                })
+                if (!deleteShopShirt) {
+                    return json({ status: "error", message: 'There is an issue while deleting Shopshirt.' }, { status: STATUS_CODES.BAD_REQUEST })
+                }
+                return json({ data: { ...deleteShopShirt }, status: "success", message: "Shopshirt delete success." }, { status: STATUS_CODES.ACCEPTED });
+            default:
+                return json({ status: "error", message: 'Method not supported.' }, { status: STATUS_CODES.BAD_GATEWAY })
         }
-        return json({ success: false, err, action: 'create', msg });
+
+    }
+    catch (error) {
+        return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
+        // let msg = 'something went wrong';
+        // if (err?.meta?.target == "shop_shirt_product_id_key") {
+        //     msg = "Vectors against this product already exist"
+        // }
+
+
+        // return json({ success: false, err, action: 'create', msg });
     }
 }
 
@@ -163,9 +187,25 @@ export default function Shopshirt() {
 
     useEffect(() => {
         if (loaderData && loaderData?.pageInfo) {
-            setPageInfo(loaderData?.pageInfo)
+            setPageInfo(loaderData?.data?.pageInfo)
         }
     }, [loaderData])
+
+    useEffect(() => {
+        // if (actionData) {
+        //     setActiveDelete(false)
+        // }
+        if (actionData && actionData?.status?.length) {
+            if (actionData?.status === 'error') {
+                shopify.toast.show(actionData?.message, { isError: true });
+            }
+
+            if (actionData?.status === 'success') {
+                shopify.toast.show(actionData?.message, { isError: false });
+                setdeleteModalOpen(false)
+            }
+        }
+    }, [actionData])
 
     const toggleDeleteModal = (id = null) => {
         setdeleteModalOpen((state) => !state);
@@ -174,17 +214,19 @@ export default function Shopshirt() {
 
     const deleteShopshirt = () => {
         // console.log(    '--------toDelete', toDelete);
-        submit({
-            toDelete: toDelete,
-        },
+        submit(
+            {
+                id: toDelete,
+            },
             {
                 action: "",
-                method: 'post',
+                method: 'delete',
                 encType: 'multipart/form-data',
                 relative: 'route',
-            })
+            }
+        )
     }
-  
+
     // const handleSearchChange = useCallback(
     //     (value) => setSearchTerm(value),
     //     []
@@ -208,10 +250,22 @@ export default function Shopshirt() {
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
             <>
-                <Page title={ pageTitle }>
-                    { nav.state === 'loading' ? <Loader /> : null }
-                    <SettingsNav currentRoute={ location } />
+                <Page title={pageTitle}>
+                    {nav.state === 'loading' ? <Loader /> : null}
+                    <SettingsNav currentRoute={location} />
                     <NotLoggedInScreen />
+                </Page>
+            </>
+        )
+    }
+
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('view_shopshirt')) {
+        return (
+            <>
+                <Page title={pageTitle}>
+                    {nav.state === 'loading' ? <Loader /> : null}
+                    <SettingsNav currentRoute={location} />
+                    <AccessScreen />
                 </Page>
             </>
         )
@@ -222,48 +276,18 @@ export default function Shopshirt() {
         <>
             {nav.state === 'loading' ? <Loader /> : null}
             <Page title="Shop Shirt">
-                <SettingsNav currentRoute={ location } />
+                <SettingsNav currentRoute={location} />
                 <Card>
-                    {/* <TextField
-                     placeholder= "Search"
-                     value={searchTerm}
-                     onChange={handleSearchChange}
-                     autoComplete="off"
-                     clearButton
-                     onClearButtonClick={handleClearButtonClick}
-                     labelHidden
-                     onKeyPress={handleKeyUp}
-                     style={{ marginBottom: '16px' }}
-                     connectedRight={
-                        <Button onClick={handleSearchButtonClick}>
-                            <Icon source={SearchIcon} tone="primary" />
-                        </Button> 
-                     }
-                     prefix={
-                        'asd'
-                            <Icon source={SearchIcon} tone="primary" />
-                     }
-                     />     */}
                     <ResourceList
-                        alternateTool={<Button onClick={() => navigate("/app/shopshirt/new")}>Add New</Button>}
-                        resourceName={{ singular: "Shop Shirt", plural: "Shop Shirts" }} 
-                        // pagination={{
-                        //     hasNext: !pageinfo?.hasNext,
-                        //     onNext: () => {
-                        //         navigate(`/app/shopshirt?cursor=${pageinfo?.endCursor}&page-action=next`);
-                        //     },
-                        //     hasPrevious: !pageinfo?.hasPrev,
-                        //     onPrevious: () => {
-                        //         navigate(`/app/shopshirt?cursor=${pageinfo?.endCursor}&page-action=prev`)
-                        //     },
-                        // }}
-                        emptyState={ ( <EmptyState
+                        alternateTool={(loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_shopshirt')) ? <Button onClick={() => navigate("/app/shopshirt/new")}>Add New</Button> : null}
+                        resourceName={{ singular: "Shop Shirt", plural: "Shop Shirts" }}
+                        emptyState={(<EmptyState
                             heading="Add New ShopShirt"
-                            action={{content: 'Add', onAction: () => navigate("/app/shopshirt/new")}}
+                            action={{ content: 'Add', onAction: () => navigate("/app/shopshirt/new"), disabled: (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_shopshirt')) }}
                             image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                         >
-                        </EmptyState> ) }
-                        items={loaderData?.shopShirtItems}
+                        </EmptyState>)}
+                        items={loaderData?.data?.shopShirtItems}
                         renderItem={(item) => {
                             const { id, title, featuredImage } = item.product;
                             const media = <Thumbnail
@@ -274,10 +298,10 @@ export default function Shopshirt() {
                             return (
                                 <ResourceItem
                                     id={id}
-                                    url={editUrl}
+                                    // url={editUrl}
                                     media={media}
                                     accessibilityLabel={`View details for ${title}`}
-                                    shortcutActions={[
+                                    shortcutActions={(loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_shopshirt')) ? [
                                         {
                                             content: "Edit",
                                             url: editUrl,
@@ -288,7 +312,7 @@ export default function Shopshirt() {
                                             onClick: () => toggleDeleteModal(item.id),
                                             icon: DeleteIcon,
                                         },
-                                    ]}
+                                    ] : []}
                                     persistActions
                                 >
                                     <Text variant="bodyMd" fontWeight="bold" as="h3">
@@ -300,17 +324,17 @@ export default function Shopshirt() {
                         }}
                     />
                     <div style={{ display: "flex", justifyContent: "center", gap: "5px" }}>
-                        <Button 
-                            disabled={ !pageinfo?.hasPrev } 
-                            onClick={ () => navigate(`/app/shopshirt?cursor=${pageinfo?.startCursor}&page-action=prev`) }
-                            icon={ ChevronLeftIcon }
-                            />
-                        
-                        <Button 
-                            disabled={ !pageinfo?.hasNext } 
-                            onClick={ () => navigate(`/app/shopshirt?cursor=${pageinfo?.endCursor}&page-action=next`) }
-                            icon={ ChevronRightIcon } 
-                            />
+                        <Button
+                            disabled={!pageinfo?.hasPrev}
+                            onClick={() => navigate(`/app/shopshirt?cursor=${pageinfo?.startCursor}&page-action=prev`)}
+                            icon={ChevronLeftIcon}
+                        />
+
+                        <Button
+                            disabled={!pageinfo?.hasNext}
+                            onClick={() => navigate(`/app/shopshirt?cursor=${pageinfo?.endCursor}&page-action=next`)}
+                            icon={ChevronRightIcon}
+                        />
                     </div>
                 </Card>
                 <Modal
@@ -318,7 +342,7 @@ export default function Shopshirt() {
                     onClose={toggleDeleteModal}
                     title="Confirm Deletion"
                     primaryAction={{
-                        content: 'Discard',
+                        content: 'Delete',
                         // @ts-ignore
                         onAction: deleteShopshirt,
                         loading: isLoading

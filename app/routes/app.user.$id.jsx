@@ -1,5 +1,5 @@
 import { json, useActionData, useLoaderData, useNavigation, useSubmit } from "@remix-run/react"
-import { Badge, Button, Card, Checkbox,  Divider, Modal, Page, Text } from "@shopify/polaris"
+import { Badge, BlockStack, Button, Card, Checkbox, Divider, InlineGrid, Modal, Page, Text } from "@shopify/polaris"
 import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
 import { getUser, loggedInCheck, updateUser } from "../controllers/users.controller"
@@ -11,14 +11,14 @@ import { authenticate } from "../shopify.server"
 export const loader = async ({ request, params }) => {
     try {
         const { sessionToken } = await authenticate.admin(request);
-        
+
         const isLoggedIn = await loggedInCheck({ sessionToken })
         if (!isLoggedIn) {
             return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
 
         const userID = params.id
-        
+
         if (!userID) {
             return json({ status: "error", message: "User not found" }, { status: STATUS_CODES.BAD_REQUEST })
         }
@@ -80,6 +80,7 @@ export default function User() {
     const [user, setUser] = useState([])
     const [scopes, setScopes] = useState({})
     const [isAdmin, setIsAdmin] = useState(false)
+    const [isSelectAll, setIsSelectAll] = useState(false)
 
     const handleScopes = useCallback((key, value) => {
         setScopes((prev) => ({
@@ -93,6 +94,11 @@ export default function User() {
         // setScopes(handleAllScope(value))
     }, [])
 
+    const handleSelectAll = useCallback((value) => {
+        setIsSelectAll(value);
+        setScopes(handleAllScope(value))
+    }, [])
+
     useEffect(() => {
         if (loaderData?.status === "error") {
             shopify.toast.show(loaderData?.message, { isError: true });
@@ -100,7 +106,7 @@ export default function User() {
 
         if (loaderData?.data?.user) {
             setUser(loaderData?.data?.user ?? null)
-            setIsAdmin(loaderData?.data?.user?.is_admin ?? false )
+            setIsAdmin(loaderData?.data?.user?.is_admin ?? false)
             const scopeArray = loaderData?.data?.user?.access.reduce((obj, key) => {
                 obj[key] = true;
                 return obj;
@@ -127,20 +133,21 @@ export default function User() {
             scopes: JSON.stringify(tempScope),
             isAdmin: JSON.stringify(isAdmin)
         },
-        {
-            action: "",
-            method: 'post',
-            encType: 'multipart/form-data',
-            relative: 'route',
-        })
+            {
+                action: "",
+                method: 'post',
+                encType: 'multipart/form-data',
+                relative: 'route',
+            })
     }
 
-    // const handleAllScope = (status) => {
-    //     return userScopes.reduce((obj, key) => {
-    //         obj[key] = status;
-    //         return obj;
-    //     }, {});
-    // }
+    const handleAllScope = (status) => {
+        return userScopes.reduce((obj, key) => {
+            obj[key] = status;
+            return obj;
+        }, {});
+    }
+    
 
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
@@ -150,13 +157,13 @@ export default function User() {
 
     return (
         <>
-            { isPageLoading && (<Loader />) }
+            {isPageLoading && (<Loader />)}
             <Page
                 title={user?.username}
                 primaryAction={
                     <Button
-                        loading={ isSubmitting }
-                        onClick={ handleSubmit }
+                        loading={isSubmitting}
+                        onClick={handleSubmit}
                         variant="primary"
                     >
                         Update
@@ -164,8 +171,9 @@ export default function User() {
                 }
                 backAction={{ url: "../manage-users" }}
             >
-                <Card>
-                    <div style={{ padding: "10px 0" }}>
+                <BlockStack gap="400">
+                    <Card>
+                        {/* <div style={{ padding: "10px 0" }}> */}
                         <Text variant="headingLg" fontWeight="bold" as="h2">User info</Text>
                         <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
                             <Text variant="headingMd" fontWeight="bold" as="h3">Email:</Text>
@@ -175,9 +183,10 @@ export default function User() {
                             <Text variant="headingMd" fontWeight="bold" as="h3">User Type:</Text>
                             {user?.is_admin ? (<Badge tone="attention">Admin</Badge>) : (<Badge tone="info">Normal</Badge>)}
                         </div>
-                    </div>
-                    <Divider></Divider>
-                    <div style={{ padding: "10px 0" }}>
+                        {/* </div> */}
+                    </Card>
+                    <Card>
+                        {/* <div style={{ padding: "10px 0" }}> */}
                         <Text variant="headingLg" fontWeight="bold" as="h2">Admin user</Text>
                         <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
                             <Checkbox
@@ -187,26 +196,51 @@ export default function User() {
                                 onChange={handleIsAdmin}
                             />
                         </div>
-                    </div>
-                    <Divider></Divider>
-                    <div style={{ padding: "10px 0" }}>
-                        <Text variant="headingLg" fontWeight="bold" as="h2">Scopes</Text>
-                        <div style={{ display: "flex", flexWrap: "wrap", rowGap: "5px", columnGap: "30px", marginTop: "10px" }}>
-                            {
-                                userScopes?.map((item, index) => {
-                                    return (
-                                        <Checkbox
-                                            key={item + index}
-                                            label={item}
-                                            checked={scopes[item] ?? false}
-                                            onChange={(value) => handleScopes(item, value)}
-                                        />
-                                    )
-                                })
-                            }
-                        </div>
-                    </div>
-                </Card>
+                        {/* <Divider /> */}
+                        {/* </div> */}
+                    </Card>
+                    <Card>
+
+                        <BlockStack gap="400">
+                            <InlineGrid columns="1fr auto">
+                                <Text variant="headingLg" fontWeight="bold" as="h2">Scopes</Text>
+                                <Checkbox
+                                    label={ isSelectAll ? "Unselect All" : "Select All" }
+                                    // helpText="Admin user have all scope access"
+                                    checked={isSelectAll}
+                                    onChange={handleSelectAll}
+                                />
+                                {/* <Button
+                                    onClick={() => {}}
+                                    accessibilityLabel="Add variant"
+                                    icon={PlusIcon}
+                                >
+                                    Add variant
+                                </Button> */}
+                            </InlineGrid>
+
+                            {/* <Divider></Divider> */}
+                            {/* <div style={{ padding: "10px 0" }}> */}
+                            {/* <Text variant="headingLg" fontWeight="bold" as="h2">Scopes</Text> */}
+                            <div style={{ display: "flex", flexWrap: "wrap", rowGap: "5px", columnGap: "30px" }}>
+                                {
+                                    userScopes?.map((item, index) => {
+                                        return (
+                                            <Checkbox
+                                                key={item + index}
+                                                label={item}
+                                                checked={scopes[item] ?? false}
+                                                onChange={(value) => handleScopes(item, value)}
+                                            />
+                                        )
+                                    })
+                                }
+                            </div>
+                            {/* </div> */}
+                        </BlockStack>
+
+                    </Card>
+                </BlockStack>
             </Page>
         </>
     )

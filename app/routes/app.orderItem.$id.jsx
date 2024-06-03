@@ -32,6 +32,7 @@ import { STATUS_CODES } from '../helpers/response';
 import { jsonLogs } from '../helpers/logs';
 import NotLoggedInScreen from '../components/notLoggedInScreen';
 import { loggedInCheck } from '../controllers/users.controller';
+import AccessScreen from '../components/accessScreen';
 
 export const loader = async ({ request, params }) => {
 	try {
@@ -43,17 +44,17 @@ export const loader = async ({ request, params }) => {
         }
 
 		if (!params.id) {
-			return json({ error: "parems: Order id or lineItem id not found" }, { status: STATUS_CODES.BAD_REQUEST })
+			return json({ status: "error", message: "parems: Order id or lineItem id not found" }, { status: STATUS_CODES.BAD_REQUEST })
 			// throw Error('Parems Not found!')
 		}
 		const orderId = params?.id.split('-')[0];
 		const lineItemId = params.id?.split('-')[1];
 		if (!orderId) {
-			return json({ error: "parems: Order id not found" }, { status: STATUS_CODES.BAD_REQUEST })
+			return json({ status: "error", message: "parems: Order id not found" }, { status: STATUS_CODES.BAD_REQUEST })
 			// throw Error('Parems Not found!')
 		}
 		if (!lineItemId) {
-			return json({ error: "parems: lineItem id not found" }, { status: STATUS_CODES.BAD_REQUEST })
+			return json({ status: "error", message: "parems: lineItem id not found" }, { status: STATUS_CODES.BAD_REQUEST })
 			// throw Error('Parems Not found!')
 		}
 
@@ -87,13 +88,13 @@ export const loader = async ({ request, params }) => {
 		})
 
 		if (!getDbOrder) {
-			return json({ error: `Order ${orderId} not found in DB` }, { status: STATUS_CODES.NOT_FOUND })
+			return json({ status: "error", message: `Order ${orderId} not found in DB` }, { status: STATUS_CODES.NOT_FOUND })
 		}
 
 		const getLineItem = getDbOrder?.line_items?.find(item => item?.id === parseInt(lineItemId, 10));
 
 		if (!getLineItem) {
-			return json({ error: `LineItem ${lineItemId} not found in DB` }, { status: STATUS_CODES.NOT_FOUND })
+			return json({ status: "error", message: `LineItem ${lineItemId} not found in DB` }, { status: STATUS_CODES.NOT_FOUND })
 		}
 
 		const shopifyOrderResp = await admin.graphql(
@@ -362,7 +363,9 @@ export const loader = async ({ request, params }) => {
 			order: finalOrderData,
 			manufacturingStatus: getManufacturingStatus,
 			lineItem: tempLineItem,
-			notesData
+			notesData,
+			scopes: isLoggedIn?.access, 
+			isAdmin: isLoggedIn?.is_admin
 		};
 
 		return json({ data: result }, { status: STATUS_CODES.OK });
@@ -797,8 +800,21 @@ export default function LineItemDetails() {
 	if (loadedData?.status === "NOT_LOGGED_IN") {
         return (
             <>
-                { nav.state === 'loading' ? <Loader /> : null }
-                <NotLoggedInScreen />
+				<Page title="Order item">
+					{ nav.state === 'loading' ? <Loader /> : null }
+					<NotLoggedInScreen />
+				</Page>
+            </>
+        )
+    }
+
+	if (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('view_orders')) {
+        return (
+            <>
+				<Page title="Order item">
+					{ nav.state === 'loading' ? <Loader /> : null }
+					<AccessScreen />
+				</Page>
             </>
         )
     }
@@ -812,11 +828,11 @@ export default function LineItemDetails() {
 				// @ts-ignore
 				title={lineItem?.title}
 				subtitle={` Order : ${orderData?.order_name}`}
-				primaryAction={{
+				primaryAction={ (loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_orders')) ? {
 					content: 'Save',
 					onAction: updateStatus,
 					loading: isLoading,
-				}}
+				} : null }
 				secondaryActions={[
 					{
 						content: 'Print designsheet',
@@ -1006,6 +1022,7 @@ export default function LineItemDetails() {
 										placeholder="Select"
 										onChange={handleStatusChange}
 										value={currentManufacturingStatus}
+										disabled={ !loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('write_orders') }
 									/>
 								</Card>
 							</Grid.Cell>
