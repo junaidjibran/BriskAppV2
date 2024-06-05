@@ -19,7 +19,8 @@ import {
 	Badge,
 	Divider,
 	BlockStack,
-	FormLayout
+	FormLayout,
+	ChoiceList
 } from '@shopify/polaris';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { json } from "@remix-run/node";
@@ -69,6 +70,14 @@ export const loader = async ({ request, params }) => {
 				shop: session?.shop
 			}
 		})
+
+		const qualityAssurance = await prisma.quality_assurance.findMany({
+			where: {
+				order_id: orderId,
+				line_item_id: lineItemId
+			}
+		})
+		console.log("Quality Assurance", qualityAssurance)
 
 		// console.log("bd wherer", JSON.stringify({
 		// 	where: {
@@ -362,11 +371,13 @@ export const loader = async ({ request, params }) => {
 		const result = {
 			order: finalOrderData,
 			manufacturingStatus: getManufacturingStatus,
+			qualityAssurance: qualityAssurance,
 			lineItem: tempLineItem,
 			notesData,
 			scopes: isLoggedIn?.access, 
 			isAdmin: isLoggedIn?.is_admin
 		};
+		console.log("Results.....................................................................................................................................................", result)
 
 		return json({ data: result }, { status: STATUS_CODES.OK });
 	} catch (error) {
@@ -396,6 +407,7 @@ export async function action({ request, params }) {
 		const note = formData.get('notes');
 		const noteID = formData.get('note_id')
 		const actionType = formData.get('action_type')
+		const qualityAssurance = JSON.parse(formData.get('quality_assurance'));
 
 		console.log("actionType----------------------------", actionType)
 
@@ -454,6 +466,34 @@ export async function action({ request, params }) {
 
 			return json({ resp: { data: updateItemStatus, message: "Update option successfully!", type: "UPDATE_PROP" } }, { status: STATUS_CODES.ACCEPTED })
 
+		} else if (actionType === "QA_UPDATE") {
+				const getDbOrder = await prisma.shopify_orders.findUnique({
+					where: { shopify_order_id: shopifyOrderId }
+				});
+
+				if (!getDbOrder) {
+					return json({ error: `Order ${shopifyOrderId} not found in DB` }, { status: STATUS_CODES.NOT_FOUND });
+				}
+
+				const lineItemPayload = getDbOrder?.line_items?.map(item => {
+					if (item?.id === parseInt(lineItemId, 10)) {
+						return { 
+							...item, 
+							qualityAssurance
+						};
+					}
+					return item;
+				});
+
+				const updateItemStatus = await prisma.shopify_orders.update({
+					where: { shopify_order_id: shopifyOrderId },
+					data: {
+						line_items: {
+							set: lineItemPayload
+						}
+					}
+				});
+				return json({ resp: { data: updateItemStatus, message: "Update status successfully!", type: "QA_UPDATE" } }, { status: STATUS_CODES.CREATED });
 		} else {
 			const getDbOrder = await prisma.shopify_orders.findUnique({
 				where: { shopify_order_id: shopifyOrderId }
@@ -522,6 +562,12 @@ export default function LineItemDetails() {
 
 	const [isEditModal, setIsEditModal] = useState(false);
 	const [selectedProp, setSelectedProp] = useState(null);
+	const [activeQualityModal, setActiveQualityModal] = useState(false);
+	const [selectedQualityStatus, setSelectedQualityStatus] = useState(['n/a']);
+	const [qualityStatus, setQualityStatus] = useState('');
+	const [reasonValue, setReasonValue] = useState('');
+	const [reason, setReason] = useState('');
+	const [reasonError, setReasonError] = useState('');
 	const [editPropFields, setEditPropFields] = useState({
 		title: "",
 		value: "",
@@ -530,6 +576,77 @@ export default function LineItemDetails() {
 
 	console.log("loaderData------------", loadedData)
 	console.log("actionDat------------", actionData)
+	
+	const handleQualityModal = useCallback(() => setActiveQualityModal(!activeQualityModal), [activeQualityModal]);
+	
+	const handleCloseQualityModal = () => {
+		handleQualityModal();
+		setReasonError('');
+	};
+
+	// const handleQualityStatus = useCallback((value) => setSelectedQualityStatus(value), []);
+	const handleQualityStatus = useCallback((value) => {
+		setSelectedQualityStatus(value);
+		if (( value[0] === 'fail') && reasonValue.trim() === '') {
+			setReasonError('Reason is required for Fail status.');
+		} else {
+			setReasonError('');
+		}
+	}, [reasonValue]);
+
+	// const handleUpdateQualityStatus = () => {
+	// 	setQualityStatus(selectedQualityStatus[0]);
+	// 	setReason(reasonValue);
+	// 	handleCloseQualityModal();
+	// };
+	const handleUpdateQualityStatus = () => {
+		if ((selectedQualityStatus[0] === 'fail') && reasonValue.trim() === '') {
+			setReasonError('Reason is required for Fail status.');
+		} else {
+			setQualityStatus(selectedQualityStatus[0]);
+			setReason(reasonValue);
+			handleCloseQualityModal();
+
+			const quality_assurance = {
+                status: selectedQualityStatus[0],
+                reason: reasonValue,
+            };
+
+			submit({
+				quality_assurance: JSON.stringify(quality_assurance),
+				action_type:"QA_UPDATE"
+			}, {
+				action: "",
+				method: "post",
+				encType: "multipart/form-data",
+				relative: "route",
+			});
+		}
+	};
+
+	const getBadgeTone = (status) => {
+		switch (status) {
+			case 'pass':
+				return 'success';
+			case 'fail':
+				return 'critical';
+			case 'n/a':
+				return 'warning';
+			default:
+				return 'default';
+		}
+	};
+	const handleReason = useCallback(
+		(newValue) => {
+			setReasonValue(newValue);
+			if (( selectedQualityStatus[0] === 'fail') && newValue.trim() === '') {
+				setReasonError('Reason is required for Fail status.');
+			} else {
+				setReasonError('');
+			}
+		},
+		[selectedQualityStatus],
+	);
 
 	const toggleEditPropModal = useCallback(() => {
 		setIsEditModal(!isEditModal)
@@ -1015,19 +1132,87 @@ export default function LineItemDetails() {
 								</BlockStack>
 							</Grid.Cell>
 							<Grid.Cell columnSpan={{ xs: 4, sm: 4, md: 4, lg: 4, xl: 4 }}>
-								<Card>
-									<Select
-										label="Select Status"
-										options={manufacturingStatus}
-										placeholder="Select"
-										onChange={handleStatusChange}
-										value={currentManufacturingStatus}
-										disabled={ !loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('write_orders') }
-									/>
-								</Card>
+								<BlockStack gap='400'>
+									<Card>
+										<Select
+											label="Select Status"
+											options={manufacturingStatus}
+											placeholder="Select"
+											onChange={handleStatusChange}
+											value={currentManufacturingStatus}
+											disabled={ !loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('write_orders') }
+										/>
+									</Card>
+									<Card>
+										<Text variant="bodyMd" as="p">
+											Quality Assurance
+										</Text>
+										<div style={{margin: '10px 0px 15px 0px'}}>
+											<Text variant="headingSm">
+												Status : <Badge tone={getBadgeTone(qualityStatus)}>{qualityStatus || "-" }</Badge>
+											</Text>
+											<div style={{ display: 'flex', marginTop:'5px' }}>
+												<div style={{marginRight:'8px'}}>
+													<Text variant="headingSm" >Reason:</Text>
+												</div>
+												<Text as='p'>
+													{reason || "-"}
+												</Text>
+											</div>
+											{/* <Text variant="headingSm">
+												Reason : {reason || "-"}
+											</Text> */}
+										</div>
+										<Button variant='Secondary' fullWidth onClick={handleQualityModal}>
+											Edit
+										</Button>
+									</Card>
+									</BlockStack>
 							</Grid.Cell>
 						</Grid>
 					</Layout.Section>
+					<Modal
+						title="Quality Assurance Settings"
+						open={activeQualityModal}
+						onClose={handleCloseQualityModal}
+						primaryAction={{
+							content: 'Update',
+							onAction: handleUpdateQualityStatus,
+							disabled: ( selectedQualityStatus[0] === 'fail') && reasonValue.trim() === '',
+						  }}
+						  secondaryActions={[
+							{
+							  content: 'Cancel',
+							  onAction: handleCloseQualityModal,
+							},
+						  ]}
+					
+					>
+						<Modal.Section>
+							<BlockStack gap="400">
+								<ChoiceList
+									title="Status"
+									choices={[
+										{label: 'Pass', value: 'pass' },
+										{label: 'Fail', value: 'fail'},
+										{label: '(N/A)', value: 'n/a'},
+									]}
+									selected={selectedQualityStatus}
+									onChange={handleQualityStatus}
+								/>
+								<TextField
+									label="Reason"
+									value={reasonValue}
+									onChange={handleReason}
+									multiline={3}
+									autoComplete='off'
+									placeholder='Enter the Reason'
+									error={reasonError}
+								/>
+							</BlockStack>
+						</Modal.Section>
+
+					</Modal>
 					<Modal
 						open={activeDelete}
 						onClose={toggleDeleteModal}
