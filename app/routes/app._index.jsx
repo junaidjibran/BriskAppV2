@@ -16,7 +16,7 @@ import Loader from '../components/loader';
 import { STATUS_CODES } from "../helpers/response";
 import CustomBadge from "../components/badge";
 // import { jsonLogs } from "../helpers/logs";
-import { hasNextPage, hasPreviousPage } from "../controllers/paginationController";
+// import { hasNextPage, hasPreviousPage } from "../controllers/paginationController";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
 import NotLoggedInScreen from "../components/notLoggedInScreen";
@@ -35,51 +35,34 @@ export const loader = async ({ request, params }) => {
         }
 
         const url = new URL(request.url);
-        const cursorParam = url.searchParams.get("cursor");
-        const pageAction = url.searchParams.get("page-action");
-        const searchQuery = url.searchParams.get("search")
-        const cursor = cursorParam ? { id: cursorParam } : null;
-        const defaultLimit = 30;
-        let pagination = {
-            startCursor: null,
-            endCursor: null,
-            count: 0,
-            hasPrev: false,
-            hasNext: false,
-        };
+        const page = url.searchParams.get("page");
+        const searchQuery = url.searchParams.get("searchQuery");
 
-        const query = {
-            where: {
-                shop: session?.shop
-            },
+        let query = {
             orderBy: {
                 created_at: 'desc',
             },
-        }
-        
-        if (cursor) {
-            query['cursor'] = cursor;
-            query['take'] = pageAction === 'prev' ? -defaultLimit : parseInt(defaultLimit);
-            query['skip'] = 1
-        } else {
-            query['take'] = parseInt(defaultLimit);
-        }
+            where: {
+                shop: shop
+            },
+        };
 
-        console.log("searchQuery--------------", searchQuery)
-
-        if (searchQuery && searchQuery.length) {
+        if (searchQuery && searchQuery?.length) {
             query['where'] = {
-                shop: session?.shop,
                 order_name: {
                     contains: searchQuery
                 }
             }
         }
-        
 
-        console.log("query-------", query)
+        let pageInfo = {
+            limit: 30,
+        }
+        if (page) pageInfo['page'] = parseInt(page)
 
-        const getOrderCall = await prisma.shopify_orders.findMany(query)
+
+        // const getOrderCall = await prisma.shopify_orders.findMany(query)
+        const [getOrderCall, pagination] = await prisma.shopify_orders.paginate(query).withPages(pageInfo)
 
         if (!getOrderCall.length) {
             return json(
@@ -93,31 +76,13 @@ export const loader = async ({ request, params }) => {
                 }, 
                 { status: STATUS_CODES.NOT_FOUND })
         }
-        // jsonLogs(getOrderCall.length, "getOrderCall---------------");
-
-        let startCursor = { id: getOrderCall[0]?.id }
-        let endCursor = { id: getOrderCall[getOrderCall.length - 1]?.id }
-        let hasNext = await hasNextPage({ cursor: endCursor, take: defaultLimit, shop, collection: "shopify_orders" });
-        let hasPrev = await hasPreviousPage({ cursor: startCursor, take: -defaultLimit, shop, collection: "shopify_orders" });
-        // @ts-ignore
-        pagination['hasNext'] = hasNext;
-        // @ts-ignore
-        pagination['hasPrev'] = hasPrev;
-        // @ts-ignore
-        pagination['startCursor'] = getOrderCall[0]?.id;
-        // @ts-ignore
-        pagination['endCursor'] = getOrderCall[getOrderCall.length - 1]?.id;
-        pagination['count'] = getOrderCall.length
-        // let shopifyOrdersData = [];
-
-        // jsonLogs(pagination, "pagination----------------")
 
 
         const getFactories = getOrderCall.length ? await prisma.factories.findMany() : [];
         const getManufactureStatus = getOrderCall.length ? await prisma.manufacturing_status.findMany() : [];
 
         const ids = getOrderCall.map(id => "gid://shopify/Order/" + id.shopify_order_id);
-        console.log("ids------------", ids)
+        // console.log("ids------------", ids)
         const shopifyOrdersResp = await admin.graphql(`#graphql
             query MyQuery($ids: [ID!]!) {
                 nodes(ids: $ids) {
@@ -145,7 +110,7 @@ export const loader = async ({ request, params }) => {
         // }
         // jsonLogs(shopifyOrdersData, "Shopify order slist--------------")
 
-        console.log("shopifyOrdersData------------------", JSON.stringify(shopifyOrdersData, null, 4))
+        // console.log("shopifyOrdersData------------------", JSON.stringify(shopifyOrdersData, null, 4))
         let updatedOrders = getOrderCall.map(item => {
             let matchFactory = getFactories.find(factoryID => factoryID.id === item.factory);
             let matchingItem = shopifyOrdersData?.data?.nodes?.find(order => order?.id?.split('/').pop() === item.shopify_order_id);
@@ -207,7 +172,7 @@ export default function Orders({ params }) {
 
     // console.log("nav-----------------", nav)
 
-    const [pageinfo, setPageInfo] = useState(null);
+    const [pageInfo, setPageInfo] = useState(null);
     const [queryValue, setQueryValue] = useState('');
     const [isSearching, setIsSearching] = useState(false)
 
@@ -232,7 +197,7 @@ export default function Orders({ params }) {
         const timeoutId = setTimeout(() => {
           console.log("queryValue is ----------", queryValue)
           if (queryValue.length === 0 || queryValue.length >= 3) {
-            navigate(`/app?search=${queryValue}`)
+            navigate(`/app?searchQuery=${queryValue}`)
           }
         }, 500);
     
@@ -346,7 +311,7 @@ export default function Orders({ params }) {
                         hasZebraStriping
                         hasMoreItems
                         resourceName={resourceName}
-                        itemCount={orders.length}
+                        itemCount={orders?.length}
                         headings={[
                             { title: "Order ID" },
                             { title: "Created At" },
@@ -360,8 +325,25 @@ export default function Orders({ params }) {
                         {rowMarkup}
                     </IndexTable>
 
+                    {
+                        orders.length && (
+                            <div style={{ display: "flex", justifyContent: "center", gap: "5px", paddingTop: "15px" }}>
+                                <Button 
+                                    disabled={ pageInfo?.isFirstPage } 
+                                    onClick={ () => navigate(`/app?page=${ pageInfo?.previousPage }`) }
+                                    icon={ ChevronLeftIcon }
+                                    />
+                                
+                                <Button 
+                                    disabled={ pageInfo?.isLastPage } 
+                                    onClick={ () => navigate(`/app?page=${ pageInfo?.nextPage }`) }
+                                    icon={ ChevronRightIcon } 
+                                    />
+                            </div>
+                        )
+                    }
+
                     {/* {
-                        !isSearching || ( !pageinfo?.hasPrev && !pageinfo?.hasNext ) && ( */}
                             <div style={{ display: "flex", justifyContent: "center", gap: "5px", paddingTop: "15px" }}>
                                 <Button 
                                     disabled={ !pageinfo?.hasPrev } 
@@ -375,8 +357,7 @@ export default function Orders({ params }) {
                                     icon={ ChevronRightIcon } 
                                     />
                             </div>
-                        {/* )
-                    } */}
+                      } */}
                     {/* <div style={{ paddingTop: '15px', display: 'flex', justifyContent: 'center' }}>
                         <Pagination
                             hasNext={loadedData.pageInfo?.hasNextPage}

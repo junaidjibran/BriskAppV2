@@ -3,7 +3,7 @@
 client_id = "c033f5a0858d3da8f3156544fe5209a9"
 name = "Brisk App"
 handle = "brisk-app-2"
-application_url = "https://c952-139-135-38-72.ngrok-free.app"
+application_url = "https://561f-2400-adc5-41f-6a00-822-f4b5-6cbc-f6b4.ngrok-free.app"
 embedded = true
 
 [build]
@@ -16,9 +16,9 @@ scopes = "read_checkout_branding_settings,read_customers,read_delivery_customiza
 
 [auth]
 redirect_urls = [
-  "https://c952-139-135-38-72.ngrok-free.app/auth/callback",
-  "https://c952-139-135-38-72.ngrok-free.app/auth/shopify/callback",
-  "https://c952-139-135-38-72.ngrok-free.app/api/auth/callback"
+  "https://561f-2400-adc5-41f-6a00-822-f4b5-6cbc-f6b4.ngrok-free.app/auth/callback",
+  "https://561f-2400-adc5-41f-6a00-822-f4b5-6cbc-f6b4.ngrok-free.app/auth/shopify/callback",
+  "https://561f-2400-adc5-41f-6a00-822-f4b5-6cbc-f6b4.ngrok-free.app/api/auth/callback"
 ]
 
 [webhooks]

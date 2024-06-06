@@ -26,19 +26,25 @@ model vectors {
   img_cdn       String
   type          VectorType      @default(CustomOrder)
   value_type    VectorValueType @default(Constant)
+  created_at    DateTime?       @default(now())
+  updated_at    DateTime?       @updatedAt
 }
 
 model manufacturing_status {
-  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
   title      String
   color      String?
   color_code String?
+  created_at DateTime? @default(now())
+  updated_at DateTime? @updatedAt
 }
 
 model factories {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
-  title    String
-  location String
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  location   String
+  created_at DateTime? @default(now())
+  updated_at DateTime? @updatedAt
   // orders   shopify_orders[]
 }
 
@@ -115,17 +121,18 @@ model inventory {
 }
 
 model inventory_transactions {
-  id        String          @id @default(auto()) @map("_id") @db.ObjectId
-  sku       String
-  type      TransactionType
-  inventory String
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  sku               String
+  type              TransactionType
+  inventory         String
   current_inventory String?
-  order_name String
-  createdAt DateTime        @default(now())
+  new_inventory     String?
+  createdAt         DateTime        @default(now())
 }
 
 enum TransactionType {
   ADD
+  UPDATE
   REMOVE
 }
 

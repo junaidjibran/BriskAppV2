@@ -1,6 +1,6 @@
 import { json, useActionData, useLoaderData, useLocation, useNavigate, useNavigation, useSubmit } from "@remix-run/react"
 import { Card, Page, ResourceItem, ResourceList, Text, Modal, EmptyState, Button } from "@shopify/polaris"
-import { EditIcon, DeleteIcon } from "@shopify/polaris-icons"
+import { EditIcon, DeleteIcon, ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons"
 import { useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
 import { getInventories, deleteInventory } from "../controllers/inventory.controller"
@@ -13,32 +13,31 @@ import AccessScreen from "../components/accessScreen"
 
 export const loader = async ({ request }) => {
     try {
-
         const { sessionToken } = await authenticate.admin(request);
+        
         const isLoggedIn = await loggedInCheck({ sessionToken })
-
         if (!isLoggedIn) {
             return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
+        
+        const url = new URL(request.url);
+        const page = url.searchParams.get("page");
+        const searchQuery = url.searchParams.get("searchQuery");
+        console.log(page, searchQuery)
+        const [inventories, pageInfo] = await getInventories({ limit: 30, page, searchQuery });
 
-        const inventories = await getInventories();
-        // const deleteSessionIfNotLogin = await deleteSession(request)
-        // if (deleteSessionIfNotLogin) {
-        //     return json({ status: "NOT_LOGGED_IN" }, deleteSessionIfNotLogin)
-        // }
+        return json(
+            {
+                data: {
+                    inventories: inventories ?? [],
+                    pageInfo: pageInfo,
+                    scopes: isLoggedIn?.access,
+                    isAdmin: isLoggedIn?.is_admin
+                }
+            }, 
+            { status: STATUS_CODES.OK }
+        )
 
-        // if (!users) {
-        //     return json({ status: "error", message: "There is an issue while fetching users" }, { status: STATUS_CODES.BAD_REQUEST })
-        // }
-
-        console.log("inventories", JSON.stringify(inventories, null, 4))
-
-        // return json({ data: { users: users ?? [] } }, { status: STATUS_CODES.OK })
-        return json({ data: { 
-            inventories: inventories ?? [],
-            scopes: isLoggedIn?.access, 
-            isAdmin: isLoggedIn?.is_admin
-         } }, { status: STATUS_CODES.OK })
     } catch (error) {
         return json({ error: JSON.stringify(error), status: "error", message: "Something went wrong..." }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -69,6 +68,7 @@ export default function Inventory() {
     const submit = useSubmit();
     const isPageLoading = ["loading"].includes(nav.state);
     const [inventories, setinventories] = useState([])
+    const [pageInfo, setPageInfo] = useState(null)
 
     useEffect(() => {
         if (loaderData?.status === "error") {
@@ -79,6 +79,11 @@ export default function Inventory() {
             console.log("isLoaderData")
             setinventories(loaderData?.data?.inventories ?? [])
         }
+
+        if (loaderData?.data?.pageInfo) {
+            setPageInfo(loaderData?.data?.pageInfo ?? null)
+        }
+
     }, [loaderData])
 
     useEffect(() => {
@@ -106,12 +111,6 @@ export default function Inventory() {
             relative: 'route',
         })
     }
-
-    // if (loaderData?.status === "NOT_LOGGED_IN") {
-    //     return (
-    //         <NotLoggedInScreen />
-    //     )
-    // }
 
     if (loaderData?.status === "NOT_LOGGED_IN") {
         return (
@@ -201,6 +200,24 @@ export default function Inventory() {
                             );
                         }}
                     />
+
+                    {
+                        inventories.length > 0 && (
+                            <div style={{ display: "flex", justifyContent: "center", gap: "5px", paddingTop: "15px" }}>
+                                <Button 
+                                    disabled={ pageInfo?.isFirstPage } 
+                                    onClick={ () => navigate(`/app/inventory-update?page=${ pageInfo?.previousPage }`) }
+                                    icon={ ChevronLeftIcon }
+                                    />
+                                
+                                <Button 
+                                    disabled={ pageInfo?.isLastPage } 
+                                    onClick={ () => navigate(`/app/inventory-update?page=${ pageInfo?.nextPage }`) }
+                                    icon={ ChevronRightIcon } 
+                                    />
+                            </div>
+                        )
+                    }
                 </Card>
             </Page>
             <Modal
