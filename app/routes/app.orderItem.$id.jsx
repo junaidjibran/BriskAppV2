@@ -71,13 +71,13 @@ export const loader = async ({ request, params }) => {
 			}
 		})
 
-		const qualityAssurance = await prisma.quality_assurance.findMany({
-			where: {
-				order_id: orderId,
-				line_item_id: lineItemId
-			}
-		})
-		console.log("Quality Assurance", qualityAssurance)
+		// const qualityAssurance = await prisma.shopify_orders.findMany({
+		// 	where: {
+		// 		order_id: orderId,
+		// 		line_item_id: lineItemId
+		// 	}
+		// })
+		// console.log("Quality Assurance", qualityAssurance)
 
 		// console.log("bd wherer", JSON.stringify({
 		// 	where: {
@@ -371,7 +371,6 @@ export const loader = async ({ request, params }) => {
 		const result = {
 			order: finalOrderData,
 			manufacturingStatus: getManufacturingStatus,
-			qualityAssurance: qualityAssurance,
 			lineItem: tempLineItem,
 			notesData,
 			scopes: isLoggedIn?.access, 
@@ -563,7 +562,7 @@ export default function LineItemDetails() {
 	const [isEditModal, setIsEditModal] = useState(false);
 	const [selectedProp, setSelectedProp] = useState(null);
 	const [activeQualityModal, setActiveQualityModal] = useState(false);
-	const [selectedQualityStatus, setSelectedQualityStatus] = useState(['n/a']);
+	const [selectedQualityStatus, setSelectedQualityStatus] = useState(['']);
 	const [qualityStatus, setQualityStatus] = useState('');
 	const [reasonValue, setReasonValue] = useState('');
 	const [reason, setReason] = useState('');
@@ -603,7 +602,8 @@ export default function LineItemDetails() {
 		if ((selectedQualityStatus[0] === 'fail') && reasonValue.trim() === '') {
 			setReasonError('Reason is required for Fail status.');
 		} else {
-			setQualityStatus(selectedQualityStatus[0]);
+			const updatedStatus = selectedQualityStatus[0] || qualityStatus.toLowerCase();
+			setQualityStatus(updatedStatus);
 			setReason(reasonValue);
 			handleCloseQualityModal();
 
@@ -630,8 +630,8 @@ export default function LineItemDetails() {
 				return 'success';
 			case 'fail':
 				return 'critical';
-			case 'n/a':
-				return 'warning';
+			// case 'n/a':
+			// 	return 'warning';
 			default:
 				return 'default';
 		}
@@ -735,6 +735,12 @@ export default function LineItemDetails() {
 		}
 		if (loadedData?.data?.notesData) {
 			setNotes(loadedData?.data?.notesData ?? [])
+		}
+		if (loadedData?.data?.lineItem?.qualityAssurance ) {
+			setSelectedQualityStatus([loadedData?.data?.lineItem?.qualityAssurance?.status]);
+			setQualityStatus(loadedData?.data?.lineItem?.qualityAssurance?.status ?? "-");
+			setReason(loadedData?.data?.lineItem?.qualityAssurance?.reason ?? "-");
+			setReasonValue(loadedData?.data?.lineItem?.qualityAssurance?.reason )
 		}
 	}, [loadedData])
 
@@ -1149,7 +1155,7 @@ export default function LineItemDetails() {
 										</Text>
 										<div style={{margin: '10px 0px 15px 0px'}}>
 											<Text variant="headingSm">
-												Status : <Badge tone={getBadgeTone(qualityStatus)}>{qualityStatus || "-" }</Badge>
+												Status : <Badge tone={getBadgeTone(qualityStatus)}>{qualityStatus.toUpperCase() || "-" }</Badge>
 											</Text>
 											<div style={{ display: 'flex', marginTop:'5px' }}>
 												<div style={{marginRight:'8px'}}>
@@ -1193,9 +1199,9 @@ export default function LineItemDetails() {
 								<ChoiceList
 									title="Status"
 									choices={[
-										{label: 'Pass', value: 'pass' },
-										{label: 'Fail', value: 'fail'},
-										{label: '(N/A)', value: 'n/a'},
+										{label: 'PASS', value: 'pass' },
+										{label: 'FAIL', value: 'fail'},
+										// {label: '(N/A)', value: 'n/a'},
 									]}
 									selected={selectedQualityStatus}
 									onChange={handleQualityStatus}
