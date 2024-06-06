@@ -1,10 +1,29 @@
 import prisma from "../db.server";
 
-export async function getSizes({ query }) {
+export async function getSizes(params) {
     try {
-        console.log("query", query)
-        const resp = await prisma.meters_per_size.findMany(query)
-        console.log("resp", resp)
+        const { page, searchQuery, limit } = params
+        let query = {
+            orderBy: {
+                created_at: 'desc',
+            },
+        };
+
+        if (searchQuery && searchQuery?.length) {
+            query['where'] = {
+                size_title: {
+                    contains: searchQuery
+                }
+            }
+        }
+
+        let pageInfo = {
+            limit: limit ?? 10,
+        }
+        if (page) pageInfo['page'] = parseInt(page)
+
+        const resp = await prisma.meters_per_size.paginate(query).withPages(pageInfo)
+
         return resp;
     } catch (error) {
         console.error('ERROR: getSizes() :: Controller => sizes.controller ::: Catch ::: ', error)

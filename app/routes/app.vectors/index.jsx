@@ -1,6 +1,6 @@
-import { useActionData, useLoaderData, useLocation, useNavigation, useSubmit } from "@remix-run/react";
+import { useActionData, useLoaderData, useLocation, useNavigate, useNavigation, useSubmit } from "@remix-run/react";
 import { Badge, Button, Card, DropZone, EmptyState, FormLayout, InlineGrid, Modal, Page, ResourceItem, ResourceList, Select, Spinner, Text, TextField, Thumbnail } from "@shopify/polaris";
-import { DeleteIcon, EditIcon, NoteIcon } from '@shopify/polaris-icons';
+import { ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon, NoteIcon } from '@shopify/polaris-icons';
 import { useCallback, useEffect, useState } from "react";
 import { json } from "@remix-run/node";
 
@@ -26,7 +26,7 @@ export async function action({ request }) {
     const actionType = formData.get('action_type')
     const vectorType = formData.get('vector_type')
     const vectorValueType = formData.get('vector_value_type')
-    
+
 
     const id = formData.get('id')
     console.log('Form Data:', { titleEnglish, valueEnglish, titleUrdu, valueUrdu, imgCdn, actionType, id });
@@ -37,29 +37,30 @@ export async function action({ request }) {
             if (vectorValueType === 'Dynamic') {
                 // @ts-ignore
                 const existingVector = await prismaCheckVector({ titleEnglish, vectorType, vectorValueType });
-                console.log('titleEnglish mac:',titleEnglish , 'VVVectorTTType:', vectorType)
+                console.log('titleEnglish mac:', titleEnglish, 'VVVectorTTType:', vectorType)
                 if (existingVector?.length) {
                     console.log('Existing Vector 1:', existingVector);
                     return json({
-                    message: 'title already exist'
-                }) }    
+                        message: 'title already exist'
+                    })
+                }
                 else {
                     const payload = { titleEnglish, valueEnglish, titleUrdu, valueUrdu, imgCdn, vectorType, vectorValueType };
                     console.log('Payload:', payload);
                     let resp = await prismaCreateVector(payload);
                     return { status: 'OK', code: 200, data: resp, type: actionType };
-                
+
                 }
-            } else if (vectorValueType === 'Constant')  {
+            } else if (vectorValueType === 'Constant') {
                 // @ts-ignore
                 const existingVector = await prismaCheckVector({ titleEnglish, valueEnglish, vectorValueType, vectorType });
-                console.log('title english2:', titleEnglish, 'value english2:', valueEnglish , 'vectorValueType2:', vectorValueType)
+                console.log('title english2:', titleEnglish, 'value english2:', valueEnglish, 'vectorValueType2:', vectorValueType)
                 if (existingVector?.length) {
                     console.log('Existing Vector 2:', existingVector);
                     return json({
                         message: 'title OR value already exist'
                     })
-                } 
+                }
                 else {
                     const payload = { titleEnglish, valueEnglish, titleUrdu, valueUrdu, imgCdn, vectorType, vectorValueType };
                     console.log('Payload:', payload);
@@ -83,11 +84,11 @@ export async function action({ request }) {
         console.error('Error in action function:', error);
         return json({
             message: error
-        },{
+        }, {
             status: 400
         })
-    } 
-    
+    }
+
     // let resp = await fileUpload(imgCdn, request)  
 }
 
@@ -100,18 +101,23 @@ export async function loader({ request }) {
             return json({ status: "NOT_LOGGED_IN", message: "You are not loggedIn." })
         }
 
-        const getVectors = await prismaGetVector()
+        const url = new URL(request.url);
+        const page = url.searchParams.get("page");
+        const searchQuery = url.searchParams.get("searchQuery");
+        // const getVectors = await prismaGetVector()
+        const [getVectors, pageInfo] = await prismaGetVector({ limit: 30, page, searchQuery })
 
         return json(
-            { 
-                data:  {
+            {
+                data: {
                     vectors: getVectors,
-                    scopes: isLoggedIn?.access, 
+                    pageInfo: pageInfo,
+                    scopes: isLoggedIn?.access,
                     isAdmin: isLoggedIn?.is_admin
                 }
             },
             { status: STATUS_CODES.OK })
-        
+
     } catch (error) {
         return json({ error: JSON.stringify(error) }, { status: STATUS_CODES.INTERNAL_SERVER_ERROR });
     }
@@ -123,6 +129,8 @@ export default function Vectors() {
     const actionData = useActionData();
     const submit = useSubmit();
     const nav = useNavigation();
+    const navigate = useNavigate();
+
     const pageTitle = "Vectors"
     // const matches = useMatches();
     const location = useLocation();
@@ -133,7 +141,7 @@ export default function Vectors() {
     console.log('loadedData', loadedData)
     console.log('actionData', actionData)
 
-    
+
     const validImageTypes = ['image/gif', 'image/jpeg', 'image/png'];
     // @ts-ignore
     const [vectorsList, setVectorsList] = useState([])
@@ -147,6 +155,8 @@ export default function Vectors() {
     const [valueUrdu, setValueUrdu] = useState('');
     const [imgCdn, setImgCdn] = useState("")
     const [isLoadingFile, setIsLoadingFile] = useState(false)
+    const [pageInfo, setPageInfo] = useState(null);
+
     // @ts-ignore
     const [selectedItem, setSelectedItem] = useState(null);
     const [actionType, setActionType] = useState("");
@@ -182,16 +192,19 @@ export default function Vectors() {
 
 
     const handleDropZoneDrop = useCallback(
-        (_dropFiles, acceptedFiles, _rejectedFiles) => { 
+        (_dropFiles, acceptedFiles, _rejectedFiles) => {
             console.log("_dropFiles", _dropFiles, "acceptedFiles", acceptedFiles, "_rejectedFiles", _rejectedFiles)
             setImgFile(acceptedFiles[0])
-        },[]
+        }, []
     );
 
     useEffect(() => {
         console.log('ComponentMount--------', loadedData)
         if (loadedData) {
             setVectorsList(loadedData?.data?.vectors)
+        }
+        if (loadedData?.data?.pageInfo) {
+            setPageInfo(loadedData?.data?.pageInfo)
         }
     }, [loadedData])
 
@@ -203,27 +216,27 @@ export default function Vectors() {
         }
 
     }, [imgFile])
-    
+
     useEffect(() => {
         if (actionData) {
             if (actionType === 'delete') {
                 shopify.toast.show("Deleted successfully!");
             } else if (actionType === 'update') {
                 shopify.toast.show("Updated successfully!");
-        //     } else if(actionType === 'create')
-        //         shopify.toast.show("Created successfully!");
-        // }
+                //     } else if(actionType === 'create')
+                //         shopify.toast.show("Created successfully!");
+                // }
             } else if (actionType === 'create' && actionData.status === 'OK') {
                 shopify.toast.show("Created successfully!");
-            } else if (actionType === 'create' && actionData.status !== 'OK') 
+            } else if (actionType === 'create' && actionData.status !== 'OK')
                 shopify.toast.show(actionData.message, { isError: true });
-            }
-            
+        }
+
         modalClose();
         if (actionType === 'delete') {
             delModalClose();
         }
-        
+
     }, [actionData])
 
     const uploadImage = async () => {
@@ -237,19 +250,18 @@ export default function Vectors() {
         try {
             setIsLoadingFile(true)
             const response = await fetch('/api/fileUpload', {
-              method: 'POST',
-              body: formData,
+                method: 'POST',
+                body: formData,
             });
 
             const data = await response.json();
 
             console.log("fileUpload data", data)
             // return false
-        
+
             setIsLoadingFile(false);
             setImgCdn(data?.data?.url)
-            if (selectedItem) 
-            {
+            if (selectedItem) {
                 let tempObj = Object.assign({}, selectedItem);
                 // @ts-ignore
                 tempObj.img_cdn = resizeImage(data?.data?.url)
@@ -257,13 +269,13 @@ export default function Vectors() {
                 setSelectedItem(tempObj);
             }
             console.log('Upload response:', data);
-          } catch (error) {
+        } catch (error) {
             setIsLoadingFile(false)
             console.error('Error uploading file:', error);
-          }
+        }
     }
 
-    const fileUpload = !imgFile && <DropZone.FileUpload  />;
+    const fileUpload = !imgFile && <DropZone.FileUpload />;
     const uploadedFile = imgFile && (
         <>
             <Thumbnail
@@ -280,8 +292,8 @@ export default function Vectors() {
             <div style={{ marginTop: "10px" }}>
                 <Text variant="bodySm" as="p">
                     {imgFile?.
-// @ts-ignore
-                    name}
+                        // @ts-ignore
+                        name}
                 </Text>
             </div>
         </>
@@ -293,7 +305,7 @@ export default function Vectors() {
     const modalClose = () => {
         setIsModal(false);
         // if (actionType === 'update') {
-            resetFields();
+        resetFields();
         // }
         setActionType('');
     }
@@ -319,7 +331,7 @@ export default function Vectors() {
         modalopen();
     }
 
-    const updateHandle = (targetItem) =>  {
+    const updateHandle = (targetItem) => {
         setActionType('update')
         setSelectedItem(targetItem);
         populateFieldsData(targetItem)
@@ -336,7 +348,7 @@ export default function Vectors() {
     const submitAction = (actionType, targetItem = null) => {
         if (actionType === 'create') {
             console.log('Create Vectors', targetItem)
-            submit({ 
+            submit({
                 title_english: titleEnglish,
                 value_english: valueEnglish,
                 title_urdu: titleUrdu,
@@ -345,7 +357,7 @@ export default function Vectors() {
                 action_type: actionType,
                 vector_type: vectorType,
                 vector_value_type: vectorValueType
-                }, {
+            }, {
                 action: "",
                 method: "post",
                 encType: "multipart/form-data",
@@ -354,7 +366,7 @@ export default function Vectors() {
         } else if (actionType === 'update') {
             console.log('Update Vector', targetItem);
             console.log('imgCdn', imgCdn)
-            submit({ 
+            submit({
                 title_english: titleEnglish,
                 value_english: valueEnglish,
                 title_urdu: titleUrdu,
@@ -365,7 +377,7 @@ export default function Vectors() {
                 action_type: actionType,
                 vector_type: vectorType,
                 vector_value_type: vectorValueType
-                }, {
+            }, {
                 action: "",
                 method: "post",
                 encType: "multipart/form-data",
@@ -374,15 +386,15 @@ export default function Vectors() {
 
         } else if (actionType === 'delete') {
             console.log('Delete', targetItem)
-            submit({ 
-                    // @ts-ignore
-                    id: selectedItem?.id,
-                    action_type: actionType
-                }, {
-                    action: "",
-                    method: "post",
-                    encType: "multipart/form-data",
-                    relative: "route",
+            submit({
+                // @ts-ignore
+                id: selectedItem?.id,
+                action_type: actionType
+            }, {
+                action: "",
+                method: "post",
+                encType: "multipart/form-data",
+                relative: "route",
             });
         }
     }
@@ -411,7 +423,7 @@ export default function Vectors() {
 
     const resizeImage = (getURL) => {
         if (getURL && getURL.length && getURL !== "undefined") {
-            return `${ getURL }?width=300`
+            return `${getURL}?width=300`
         } else {
             return ""
         }
@@ -420,9 +432,9 @@ export default function Vectors() {
     if (loadedData?.status === "NOT_LOGGED_IN") {
         return (
             <>
-                <Page title={ pageTitle }>
-                    { nav.state === 'loading' ? <Loader /> : null }
-                    <SettingsNav currentRoute={ location } />
+                <Page title={pageTitle}>
+                    {nav.state === 'loading' ? <Loader /> : null}
+                    <SettingsNav currentRoute={location} />
                     <NotLoggedInScreen />
                 </Page>
             </>
@@ -432,9 +444,9 @@ export default function Vectors() {
     if (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('view_vectors')) {
         return (
             <>
-                <Page title={ pageTitle }>
-                    { nav.state === 'loading' ? <Loader /> : null }
-                    <SettingsNav currentRoute={ location } />
+                <Page title={pageTitle}>
+                    {nav.state === 'loading' ? <Loader /> : null}
+                    <SettingsNav currentRoute={location} />
                     <AccessScreen />
                 </Page>
             </>
@@ -444,84 +456,102 @@ export default function Vectors() {
 
     return (
         <>
-            { nav.state === 'loading' ? <Loader /> : null }
+            {nav.state === 'loading' ? <Loader /> : null}
             <Page title="Vectors">
-                <SettingsNav currentRoute={ location } />
+                <SettingsNav currentRoute={location} />
                 <Card>
-                    { vectorsList && vectorsList.length ?
-                    <ResourceList
-                    resourceName={{ singular: 'Vector', plural: 'Vectors' }}
-                    alternateTool={ (loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_vectors')) ? <Button onClick={ () => createHandle() }>Add Vector</Button> : null}
-                    items={ vectorsList }
-                    
-                    renderItem={(item) => {
-                        // @ts-ignore
-                        const { id, title_english, value_english, title_urdu, value_urdu, img_cdn, type, value_type} = item;
-                        const media = <Thumbnail
-                            source={resizeImage(img_cdn)}
-                            size="large"
-                            // @ts-ignore
-                            alt={value_english}
-                        />;
-                        const shortcutActions = (loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_vectors')) ? [
-                            {
-                                content: 'Edit',
-                                // @ts-ignore
-                                onAction: () => updateHandle(item),
-                                icon: EditIcon,
-                            },
-                            {
-                                content: 'Delete',
-                                // @ts-ignore
-                                onAction: () => delHandle(item),
-                                icon: DeleteIcon,
-                            },
-                        ] : []
+                    {vectorsList && vectorsList.length ?
+                        <ResourceList
+                            resourceName={{ singular: 'Vector', plural: 'Vectors' }}
+                            alternateTool={(loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_vectors')) ? <Button onClick={() => createHandle()}>Add Vector</Button> : null}
+                            items={vectorsList}
 
-                        return (
-                            <
-// @ts-ignore
-                            ResourceItem
-                                id={id}
-                                media={media}
-                                accessibilityLabel={`View details for ${value_english}`}
-                                shortcutActions={shortcutActions}
-                                persistActions
-                            >
-                                <Text variant="bodyMd" as="h3">
-                                    {title_english} : {value_english}
-                                </Text>
-                                <Text variant="bodyMd" as="h3">
-                                    {title_urdu} : {value_urdu}
-                                </Text>
-                                <br />
-                                <div>
-                                    <Badge 
-                                        tone={ type === "ShopShirt" ? 'success' : 'info' }> 
-                                    { type === "ShopShirt" ? 'Shop Shirt' : type === "CustomOrder" ? "Design Your Shirt" : "" } 
-                                    </Badge>
-                        
-                                </div>
-                            </ResourceItem>
-                        );
-                    }}
-                />
-                     : 
+                            renderItem={(item) => {
+                                // @ts-ignore
+                                const { id, title_english, value_english, title_urdu, value_urdu, img_cdn, type, value_type } = item;
+                                const media = <Thumbnail
+                                    source={resizeImage(img_cdn)}
+                                    size="large"
+                                    // @ts-ignore
+                                    alt={value_english}
+                                />;
+                                const shortcutActions = (loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_vectors')) ? [
+                                    {
+                                        content: 'Edit',
+                                        // @ts-ignore
+                                        onAction: () => updateHandle(item),
+                                        icon: EditIcon,
+                                    },
+                                    {
+                                        content: 'Delete',
+                                        // @ts-ignore
+                                        onAction: () => delHandle(item),
+                                        icon: DeleteIcon,
+                                    },
+                                ] : []
+
+                                return (
+                                    <
+                                        // @ts-ignore
+                                        ResourceItem
+                                        id={id}
+                                        media={media}
+                                        accessibilityLabel={`View details for ${value_english}`}
+                                        shortcutActions={shortcutActions}
+                                        persistActions
+                                    >
+                                        <Text variant="bodyMd" as="h3">
+                                            {title_english} : {value_english}
+                                        </Text>
+                                        <Text variant="bodyMd" as="h3">
+                                            {title_urdu} : {value_urdu}
+                                        </Text>
+                                        <br />
+                                        <div>
+                                            <Badge
+                                                tone={type === "ShopShirt" ? 'success' : 'info'}>
+                                                {type === "ShopShirt" ? 'Shop Shirt' : type === "CustomOrder" ? "Design Your Shirt" : ""}
+                                            </Badge>
+
+                                        </div>
+                                    </ResourceItem>
+                                );
+                            }}
+                        />
+                        :
                         (
                             <EmptyState
                                 heading="Add New Vector"
-                                action={{content: 'Add', onAction: createHandle, disabled: (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('write_vectors'))}}
+                                action={{ content: 'Add', onAction: createHandle, disabled: (!loadedData?.data?.isAdmin && !loadedData?.data?.scopes?.includes('write_vectors')) }}
                                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                             >
                             </EmptyState>
                         )
-                     }
-                    
+                    }
+
+                    {
+                        vectorsList.length > 0 && (
+                            <div style={{ display: "flex", justifyContent: "center", gap: "5px", paddingTop: "15px" }}>
+                                <Button 
+                                    disabled={ pageInfo?.isFirstPage } 
+                                    onClick={ () => navigate(`/app/vectors?page=${ pageInfo?.previousPage }`) }
+                                    icon={ ChevronLeftIcon }
+                                    />
+                                
+                                <Button 
+                                    disabled={ pageInfo?.isLastPage } 
+                                    onClick={ () => navigate(`/app/vectors?page=${ pageInfo?.nextPage }`) }
+                                    icon={ ChevronRightIcon } 
+                                    />
+                            </div>
+                        )
+                    }
+
                 </Card>
 
                 <Modal
-                    open={ isDelModal }
-                    onClose={ isLoading ? () => {} : delModalClose}
+                    open={isDelModal}
+                    onClose={isLoading ? () => { } : delModalClose}
                     title="Delete vector"
                     primaryAction={{
                         content: "Delete",
@@ -531,7 +561,7 @@ export default function Vectors() {
                     secondaryActions={[
                         {
                             content: 'Close',
-                            onAction: isLoading ? () => {} : delModalClose,
+                            onAction: isLoading ? () => { } : delModalClose,
                             disabled: isLoading
                         },
                     ]}
@@ -544,9 +574,9 @@ export default function Vectors() {
                 </Modal>
 
                 <Modal
-                    open={ isModal}
-                    onClose={isLoadingFile ? () => {} : modalClose}
-                    title={ actionType === 'create' ? "Add new vector" : actionType === 'update' ? "Edit vector" : ""  }
+                    open={isModal}
+                    onClose={isLoadingFile ? () => { } : modalClose}
+                    title={actionType === 'create' ? "Add new vector" : actionType === 'update' ? "Edit vector" : ""}
                     primaryAction={{
                         content: actionType === 'create' ? "Add " : actionType === 'update' ? "Update" : "",
                         onAction: () => submitAction(actionType),
@@ -556,7 +586,7 @@ export default function Vectors() {
                     secondaryActions={[
                         {
                             content: 'Close',
-                            onAction: isLoadingFile ? () => {} : modalClose,
+                            onAction: isLoadingFile ? () => { } : modalClose,
                             disabled: isLoadingFile
                         },
                     ]}
@@ -567,14 +597,14 @@ export default function Vectors() {
                         </Frame> */}
                         <FormLayout>
                             <div style={{ position: "relative" }}>
-                            <DropZone 
-                                allowMultiple={false} 
-                                onDrop={handleDropZoneDrop} 
-                                type="image"
-                                accept=".png, .jpg, .jpeg, .gif, .webp"
-                                disabled={ isLoadingFile }>
-                                <div style={{ padding: "10px", paddingTop: '15px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    {/* { selectedItem && selectedItem?.img_cdn && selectedItem?.img_cdn.length ? <>
+                                <DropZone
+                                    allowMultiple={false}
+                                    onDrop={handleDropZoneDrop}
+                                    type="image"
+                                    accept=".png, .jpg, .jpeg, .gif, .webp"
+                                    disabled={isLoadingFile}>
+                                    <div style={{ padding: "10px", paddingTop: '15px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        {/* { selectedItem && selectedItem?.img_cdn && selectedItem?.img_cdn.length ? <>
                                         <Thumbnail
                                             size="large"
                                             // @ts-ignore
@@ -586,97 +616,97 @@ export default function Vectors() {
                                     {fileUpload}
                                     </> } */}
 
-                                    { imgFile ? <>
-                                        {uploadedFile}
-                                        {fileUpload}
-                                    </> :  selectedItem ? <>
-                                    <Thumbnail
-                                            size="large"
-                                            // @ts-ignore
-                                            alt={ valueEnglish }
-                                            // @ts-ignore
-                                            source={ selectedItem?.img_cdn }
-                                        />
-                                    </> : <>{fileUpload}</> }
-                                    
-                                </div>
-                                
-                            </DropZone>
-                            {
-                                isLoadingFile && (
-                                    <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}>
-                                        <Spinner accessibilityLabel="Spinner example" size="large" />
+                                        {imgFile ? <>
+                                            {uploadedFile}
+                                            {fileUpload}
+                                        </> : selectedItem ? <>
+                                            <Thumbnail
+                                                size="large"
+                                                // @ts-ignore
+                                                alt={valueEnglish}
+                                                // @ts-ignore
+                                                source={selectedItem?.img_cdn}
+                                            />
+                                        </> : <>{fileUpload}</>}
+
                                     </div>
-                                )
-                            }
+
+                                </DropZone>
+                                {
+                                    isLoadingFile && (
+                                        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}>
+                                            <Spinner accessibilityLabel="Spinner example" size="large" />
+                                        </div>
+                                    )
+                                }
                             </div>
 
                             <InlineGrid gap="400" columns={2}>
 
-                            <Select
-                                label="Vector Type"
-                                options={[
-                                    {
-                                        value: "CustomOrder",
-                                        label: "Design Your Shirt"
-                                    },
-                                    {
-                                        value: "ShopShirt",
-                                        label: "Shop Shirt"
-                                    }
-                                ]}
-                                onChange={handleVectorType}
-                                value={vectorType}
-                            />
-
-                            <Select
-                                label="Vector Value Type"
-                                options={[
-                                    
-                                    {
-                                        value: "Constant",
-                                        label: "Constant"
-                                    },
-                                    {
-                                        value: "Dynamic",
-                                        label: "Dynamic"
-                                    }
-                                ]}
-                                onChange={handleVectorValueType}
-                                value={vectorValueType}
-                            />
-
-                            
-
-                            <TextField
-                                label="Title (English)"
-                                value={titleEnglish}
-                                onChange={handleTitleEnglish}
-                                autoComplete="off"
-                            />
-
-                            <TextField
-                                label="Value (English)"
-                                value={valueEnglish}
-                                onChange={handleValueEnglish}
-                                autoComplete="off"
+                                <Select
+                                    label="Vector Type"
+                                    options={[
+                                        {
+                                            value: "CustomOrder",
+                                            label: "Design Your Shirt"
+                                        },
+                                        {
+                                            value: "ShopShirt",
+                                            label: "Shop Shirt"
+                                        }
+                                    ]}
+                                    onChange={handleVectorType}
+                                    value={vectorType}
                                 />
 
-                            <TextField
-                                label="Title (Urdu)"
-                                value={titleUrdu}
-                                onChange={handleTitleUrdu}
-                                autoComplete="off"
+                                <Select
+                                    label="Vector Value Type"
+                                    options={[
+
+                                        {
+                                            value: "Constant",
+                                            label: "Constant"
+                                        },
+                                        {
+                                            value: "Dynamic",
+                                            label: "Dynamic"
+                                        }
+                                    ]}
+                                    onChange={handleVectorValueType}
+                                    value={vectorValueType}
                                 />
 
-                            <TextField
-                                label="Value (Urdu)"
-                                value={valueUrdu}
-                                onChange={handleValueUrdu}
-                                autoComplete="off"
+
+
+                                <TextField
+                                    label="Title (English)"
+                                    value={titleEnglish}
+                                    onChange={handleTitleEnglish}
+                                    autoComplete="off"
                                 />
 
-                            
+                                <TextField
+                                    label="Value (English)"
+                                    value={valueEnglish}
+                                    onChange={handleValueEnglish}
+                                    autoComplete="off"
+                                />
+
+                                <TextField
+                                    label="Title (Urdu)"
+                                    value={titleUrdu}
+                                    onChange={handleTitleUrdu}
+                                    autoComplete="off"
+                                />
+
+                                <TextField
+                                    label="Value (Urdu)"
+                                    value={valueUrdu}
+                                    onChange={handleValueUrdu}
+                                    autoComplete="off"
+                                />
+
+
                             </InlineGrid>
                         </FormLayout>
                     </Modal.Section>
