@@ -2,9 +2,30 @@ import prisma from "../db.server";
 // import { getSizes } from "./sizes.controller";
 const sizeKeys = ["Measurements (Inches) (Neck)", "Collar Size", "What's your collar size? (Collar/Neck size)"]
 
-export async function getInventories() {
+export async function getInventories(params) {
     try {
-        const resp = await prisma.inventory.findMany()
+        const { page, searchQuery, limit } = params
+        let query = {
+            orderBy: {
+                created_at: 'desc',
+            },
+        };
+
+        if (searchQuery && searchQuery?.length) {
+            query['where'] = {
+                sku: {
+                    contains: searchQuery
+                }
+            }
+        }
+
+        let pageInfo = {
+            limit: limit ?? 10,
+        }
+        if (page) pageInfo['page'] = parseInt(page)
+            
+        const resp = await prisma.inventory.paginate(query).withPages(pageInfo)
+
         return resp;
     } catch (error) {
         console.error('ERROR: getInventories() :: Controller => inventory.controller ::: Catch ::: ', error)
@@ -21,6 +42,18 @@ export async function getInventory({ inventoryId }) {
         return resp;
     } catch (error) {
         console.error('ERROR: getInventory() :: Controller => inventory.controller ::: Catch ::: ', error)
+    }
+}
+export async function getInventoryBySKU({ sku }) {
+    try {
+        const resp = await prisma.inventory.findUnique({
+            where: {
+                sku: sku
+            }
+        })
+        return resp;
+    } catch (error) {
+        console.error('ERROR: getInventoryBySKU() :: Controller => inventory.controller ::: Catch ::: ', error)
     }
 }
 
@@ -70,10 +103,27 @@ export async function deleteInventory({ id }) {
     }
 }
 
+export async function inventoryTransactionsLog({ sku, type, inventory, new_inventory, current_inventory }) {
+    try {
+        const updateInventory = await prisma.inventory_transactions.create({
+            data: {
+                sku: sku,
+                type: type,
+                inventory: inventory?.toString(),
+                current_inventory: current_inventory.toString(),
+                new_inventory: new_inventory.toString()
+            }
+        })
+        return updateInventory;
+    } catch (error) {
+        console.error('ERROR: inventoryTransactionsLog() :: Controller => inventory.controller ::: Catch ::: ', error)
+    }
+}
+
 export async function inventoryTransactions({ lineItems, type, orderName }) {
     try {
-        console.log("inventoryTransactions ----- lineItems-----", lineItems )
-        console.log("inventoryTransactions ----- type-----", type );
+        console.log("inventoryTransactions ----- lineItems-----", lineItems)
+        console.log("inventoryTransactions ----- type-----", type);
         const getSizesDB = await prisma.meters_per_size.findMany();
 
         if (!lineItems?.length) {
@@ -102,7 +152,7 @@ export async function inventoryTransactions({ lineItems, type, orderName }) {
 
             if (isVariantOptionSize) {
                 getTargetSize = isVariantOptionSize
-            } else if (isLineItemProperties){
+            } else if (isLineItemProperties) {
                 // console.log("")
                 getTargetSize = isLineItemProperties
             }
@@ -124,6 +174,12 @@ export async function inventoryTransactions({ lineItems, type, orderName }) {
                     const remainingInventory = parseFloat(balanceInventory) - parseFloat(subtractInventory)
                     console.log("remainingInventory", remainingInventory, typeof remainingInventory)
 
+                    const getCurrentInventory = await prisma.inventory.findUnique({
+                        where: {
+                            sku: lineitem?.sku
+                        }
+                    })
+
                     const updateRemainingInventory = await prisma.inventory.update({
                         where: {
                             sku: lineitem?.sku
@@ -132,20 +188,20 @@ export async function inventoryTransactions({ lineItems, type, orderName }) {
                             inventory: remainingInventory?.toString()
                         }
                     })
-                    
+
                     console.log("updateRemainingInventory", updateRemainingInventory)
                     const setInventoryTransactionLog = await prisma.inventory_transactions.create({
                         data: {
                             sku: lineitem?.sku,
                             type: type,
-                            order_name: orderName,
                             inventory: subtractInventory?.toString(),
-                            current_inventory: updateRemainingInventory?.inventory
+                            current_inventory: getCurrentInventory?.inventory,
+                            new_inventory: updateRemainingInventory?.inventory
                         }
-                    }) 
+                    })
                     console.log("setInventoryTransactionLog", setInventoryTransactionLog)
                 }
-            }            
+            }
         }
     } catch (error) {
         console.error('ERROR: inventoryTransactions() :: Controller => inventory.controller ::: Catch ::: ', error)

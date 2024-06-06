@@ -16,7 +16,7 @@ import {
 } from "@remix-run/react";
 import { fetchProductQuery } from '../queries/productQueries.js'
 import { useEffect, useState } from "react";
-import { hasNextPage, hasPreviousPage } from "../controllers/shopshirt_controller";
+import { prismaGetShopShirt } from "../controllers/shopshirt_controller";
 import Loader from "../components/loader";
 import NotLoggedInScreen from "../components/notLoggedInScreen.jsx";
 import { loggedInCheck } from "../controllers/users.controller.js";
@@ -35,57 +35,12 @@ export async function loader({ request }) {
     }
 
     const url = new URL(request.url);
-    const cursorParam = url.searchParams.get("cursor");
-    const pageAction = url.searchParams.get("page-action");
-    const cursor = cursorParam ? { id: cursorParam } : null;
-    let pagination = {
-        startCursor: null,
-        endCursor: null,
-        count: 0,
-        hasPrev: false,
-        hasNext: false,
-    };
+    const page = url.searchParams.get("page");
+    // const searchQuery = url.searchParams.get("searchQuery");
 
-    let defaultLimit = 20
-    let take = defaultLimit;
-    if (pageAction === 'prev') {
-        take = -defaultLimit
-    }
-
-    const query = {
-        where: {
-            shop: session.shop
-        },
-        orderBy: {
-            created_at: 'desc',
-        },
-    }
-
-    if (cursor) {
-        query['cursor'] = cursor;
-        query['take'] = parseInt(take);
-        query['skip'] = 1
-    } else {
-        query['take'] = take;
-    }
-
-    const shopShirtItems = await prisma.shop_shirt.findMany(query)
+    const [shopShirtItems, pagination] = await prismaGetShopShirt({ limit: 30, page, shop: session?.shop })
 
     if (shopShirtItems.length) {
-        // Page Info Logic for Pagination.
-        let startCursor = { id: shopShirtItems[0]?.id }
-        let endCursor = { id: shopShirtItems[shopShirtItems.length - 1]?.id }
-        let hasNext = await hasNextPage(endCursor, defaultLimit, session.shop);
-        let hasPrev = await hasPreviousPage(startCursor, -defaultLimit, session.shop);
-        pagination['hasNext'] = hasNext;
-        pagination['hasPrev'] = hasPrev;
-        pagination['startCursor'] = shopShirtItems[0]?.id;
-        pagination['endCursor'] = shopShirtItems[shopShirtItems.length - 1]?.id;
-        pagination['count'] = shopShirtItems.length
-
-        // const productIds = shopShirtItems.map(id => id.product_id);
-        // console.log("------------------------------------", productIds)
-
         // fetching products from shopify
         for (let index = 0; index < shopShirtItems.length; index++) {
             const item = shopShirtItems[index];
@@ -166,9 +121,9 @@ export default function Shopshirt() {
 
     const [deleteModalOpen, setdeleteModalOpen] = useState(false);
     const [toDelete, setToDelete] = useState(null);
-    const [pageinfo, setPageInfo] = useState(null);
+    const [pageInfo, setPageInfo] = useState(null);
 
-    console.log("LoaderData", loaderData)
+    // console.log("LoaderData", loaderData)
     // const [searchTerm, setSearchTerm] = useState("");
     // const [textFieldValue, setTextFieldValue] = useState('Jaded Pixel');
 
@@ -186,7 +141,7 @@ export default function Shopshirt() {
     // }, [actionData])
 
     useEffect(() => {
-        if (loaderData && loaderData?.pageInfo) {
+        if (loaderData && loaderData?.data?.pageInfo) {
             setPageInfo(loaderData?.data?.pageInfo)
         }
     }, [loaderData])
@@ -323,19 +278,23 @@ export default function Shopshirt() {
                             );
                         }}
                     />
-                    <div style={{ display: "flex", justifyContent: "center", gap: "5px" }}>
-                        <Button
-                            disabled={!pageinfo?.hasPrev}
-                            onClick={() => navigate(`/app/shopshirt?cursor=${pageinfo?.startCursor}&page-action=prev`)}
-                            icon={ChevronLeftIcon}
-                        />
-
-                        <Button
-                            disabled={!pageinfo?.hasNext}
-                            onClick={() => navigate(`/app/shopshirt?cursor=${pageinfo?.endCursor}&page-action=next`)}
-                            icon={ChevronRightIcon}
-                        />
-                    </div>
+                    {
+                        loaderData?.data?.shopShirtItems?.length && (
+                            <div style={{ display: "flex", justifyContent: "center", gap: "5px", paddingTop: "15px" }}>
+                                <Button 
+                                    disabled={ pageInfo?.isFirstPage } 
+                                    onClick={ () => navigate(`/app/shopshirt?page=${ pageInfo?.previousPage }`) }
+                                    icon={ ChevronLeftIcon }
+                                    />
+                                
+                                <Button 
+                                    disabled={ pageInfo?.isLastPage } 
+                                    onClick={ () => navigate(`/app/shopshirt?page=${ pageInfo?.nextPage }`) }
+                                    icon={ ChevronRightIcon } 
+                                    />
+                            </div>
+                        )
+                    }
                 </Card>
                 <Modal
                     open={deleteModalOpen}

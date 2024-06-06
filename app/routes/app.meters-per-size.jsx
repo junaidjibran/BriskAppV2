@@ -9,18 +9,15 @@ import Loader from "../components/loader"
 // import NotLoggedInScreen from "../components/notLoggedInScreen"
 // import prisma from "../db.server"
 import { authenticate } from "../shopify.server"
-import { hasNextPage, hasPreviousPage } from "../controllers/paginationController"
 import InventoryNav from "../components/InventoryNav"
 import { loggedInCheck } from "../controllers/users.controller"
-import SettingsNav from "../components/settingsNav"
 import NotLoggedInScreen from "../components/notLoggedInScreen"
 import AccessScreen from "../components/accessScreen"
 // import { deleteSession } from "../helpers/session.server"
 
 export const loader = async ({ request }) => {
     try {
-        const { session, sessionToken } = await authenticate.admin(request);
-        const shop = session?.shop
+        const { sessionToken } = await authenticate.admin(request);
 
         const isLoggedIn = await loggedInCheck({ sessionToken })
         if (!isLoggedIn) {
@@ -30,78 +27,19 @@ export const loader = async ({ request }) => {
         // console.log('===========sizes', sizes)
 
         const url = new URL(request.url);
-        const cursorParam = url.searchParams.get("cursor");
-        const pageAction = url.searchParams.get("page-action");
-        // const searchQuery = url.searchParams.get("search")
-        const cursor = cursorParam ? { id: cursorParam } : null;
-        const defaultLimit = 30;
-        let pagination = {
-            startCursor: null,
-            endCursor: null,
-            count: 0,
-            hasPrev: false,
-            hasNext: false,
-        };
+        const page = url.searchParams.get("page");
+        const searchQuery = url.searchParams.get("searchQuery");
+        console.log(page, searchQuery)
 
-        const query = {
-            orderBy: {
-                created_at: 'desc',
-            },
-        }
-
-        if (cursor) {
-            query['cursor'] = cursor;
-            query['take'] = pageAction === 'prev' ? -defaultLimit : parseInt(defaultLimit);
-            query['skip'] = 1
-        } else {
-            query['take'] = parseInt(defaultLimit);
-        }
-
-        // console.log("searchQuery--------------", searchQuery)
-
-        // if (searchQuery && searchQuery.length) {
-        //     query['where'] = {
-        //         shop: session?.shop,
-        //         order_name: {
-        //             contains: searchQuery
-        //         }
-        //     }
-        // }
-
-
-        console.log("query-------", query)
-
-        // const getOrderCall = await prisma.shopify_orders.findMany(query)
-        const sizes = await getSizes({ query });
-
-        // if (!sizes.length) {
-        //     return json({ message: "No Size found in APP" }, { status: STATUS_CODES.NOT_FOUND })
-        // }
-        // jsonLogs(getOrderCall.length, "getOrderCall---------------");
-
-        if (sizes?.length === defaultLimit) {
-            console.log("Has Pagination")
-            let startCursor = { id: sizes[0]?.id }
-            let endCursor = { id: sizes[sizes.length - 1]?.id }
-            let hasNext = await hasNextPage({ cursor: endCursor, take: defaultLimit, collection: "metersPerSize" });
-            let hasPrev = await hasPreviousPage({ cursor: startCursor, take: -defaultLimit, collection: "metersPerSize" });
-            // @ts-ignore
-            pagination['hasNext'] = hasNext;
-            // @ts-ignore
-            pagination['hasPrev'] = hasPrev;
-            // @ts-ignore
-            pagination['startCursor'] = sizes[0]?.id;
-            // @ts-ignore
-            pagination['endCursor'] = sizes[sizes.length - 1]?.id;
-            pagination['count'] = sizes.length
-        }
+        const [sizes, pageInfo] = await getSizes({ limit: 30, page, searchQuery });
+        console.log(sizes, pageInfo)
 
         return json(
             { 
                 data: 
                 { 
                     sizes: sizes ?? [], 
-                    pageInfo: pagination,
+                    pageInfo: pageInfo,
                     scopes: isLoggedIn?.access, 
                     isAdmin: isLoggedIn?.is_admin
                 } 
@@ -143,7 +81,7 @@ export default function MetersPerSize() {
     const [activeDelete, setActiveDelete] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [sizes, setsizes] = useState([])
-    const [pageinfo, setPageInfo] = useState(null);
+    const [pageInfo, setPageInfo] = useState(null);
     const pageTitle = "Meter per Size"
 
 
@@ -285,14 +223,14 @@ export default function MetersPerSize() {
                         sizes.length > 0 && (
                             <div style={{ display: "flex", justifyContent: "center", gap: "5px", paddingTop: "15px" }}>
                                 <Button 
-                                    disabled={ !pageinfo?.hasPrev } 
-                                    onClick={ () => navigate(`/app/meterPerSize?cursor=${pageinfo?.startCursor}&page-action=prev`) }
+                                    disabled={ pageInfo?.isFirstPage } 
+                                    onClick={ () => navigate(`/app/meters-per-size?page=${ pageInfo?.previousPage }`) }
                                     icon={ ChevronLeftIcon }
                                     />
                                 
                                 <Button 
-                                    disabled={ !pageinfo?.hasNext } 
-                                    onClick={ () => navigate(`/app/meterPerSize?cursor=${pageinfo?.endCursor}&page-action=next`) }
+                                    disabled={ pageInfo?.isLastPage } 
+                                    onClick={ () => navigate(`/app/meters-per-size?page=${ pageInfo?.nextPage }`) }
                                     icon={ ChevronRightIcon } 
                                     />
                             </div>
