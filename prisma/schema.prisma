@@ -53,6 +53,7 @@ model shopify_orders {
   shopify_order_id String   @unique
   order_name       String
   factory          String?
+  isUrgent         Boolean @default(false)
   line_items       Json[]
   shop             String
   created_at       DateTime

@@ -6,6 +6,7 @@ import {
     Page,
     Button,
     Filters,
+    Badge,
 } from "@shopify/polaris";
 import prisma from "../db.server";
 import { json } from "@remix-run/node";
@@ -215,7 +216,7 @@ export default function Orders({ params }) {
 
 
     const rowMarkup = orders.map(
-        ({ shopify_order_id, order_name, created_at, customer, displayFulfillmentStatus, displayFinancialStatus, lineitemStatusCount, factoryDetails, totalStatus }, index) => {
+        ({ shopify_order_id, order_name, created_at, customer, displayFulfillmentStatus, displayFinancialStatus, lineitemStatusCount, factoryDetails, totalStatus, isUrgent }, index) => {
             return (
                 <IndexTable.Row
                     id={shopify_order_id}
@@ -234,6 +235,7 @@ export default function Orders({ params }) {
                     <IndexTable.Cell>{customer?.displayName ?? '-'}</IndexTable.Cell>
                     <IndexTable.Cell>{displayFinancialStatus ?? "-"}</IndexTable.Cell>
                     <IndexTable.Cell>{displayFulfillmentStatus ?? "-"}</IndexTable.Cell>
+                    <IndexTable.Cell>{isUrgent ? <Badge tone="critical">Urgent</Badge> : "-"}</IndexTable.Cell>
                     <IndexTable.Cell>
                         <div style={{ display: "flex", gap: "3px" }}>
                             {totalStatus && totalStatus.length ? totalStatus?.map((statusInfo, statusIndex) => (
@@ -318,6 +320,7 @@ export default function Orders({ params }) {
                             { title: "Customer" },
                             { title: "Financial Status" },
                             { title: "Fulfillment Status" },
+                            { title: "Urgency Status"},
                             { title: "Manufacturing Status" },
                             { title: "Factory" }
                         ]}

@@ -12,6 +12,8 @@ import {
 	Select,
 	Tag,
 	Thumbnail,
+	Checkbox,
+	Badge,
 } from "@shopify/polaris";
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { json } from "@remix-run/node";
@@ -115,6 +117,7 @@ export const loader = async ({ request, params }) => {
 			// console.log("matchStatus", matchStatus)
 			// item
 			item["manufacturingStatus"] = matchStatus ?? null
+			item["qualityAssurance"] = matchDbOrder?.qualityAssurance ?? null;
 		})
 
 		if (getDbOrder?.factory) {
@@ -128,6 +131,7 @@ export const loader = async ({ request, params }) => {
 				data: { 
 					order: shopifyOrder, 
 					factories: factories,
+					urgencyStatus: getDbOrder,
 					scopes: isLoggedIn?.access, 
                     isAdmin: isLoggedIn?.is_admin
 				} 
@@ -144,6 +148,8 @@ export async function action({ request, params }) {
 		const formData = await request.formData();
 		const shopifyOrderId = params.orderId;
 		const factory = formData.get('factory');
+		const urgencyStatus = formData.get('urgencyStatus');
+		const booleanValue = urgencyStatus === 'true' ? true : false;
 		// const lineItems = formData.get('lineItems')
 
 		if (!shopifyOrderId) {
@@ -153,13 +159,24 @@ export async function action({ request, params }) {
 
 		const res = await prisma.shopify_orders.update({
 			where: { "shopify_order_id": shopifyOrderId, "shop": session?.shop },
-			data: { "factory": factory },
+			data: { "factory": factory, "isUrgent": booleanValue },
 		});
 		return json({ data: { order: res, message: "Factory updated successfully" } }, { status: STATUS_CODES.OK })
 	} catch (error) {
 		return json({ error: "An error occurred during the action.", message: error }, { status: STATUS_CODES.NOT_IMPLEMENTED });
 	}
 }
+
+const getBadgeTone = (status) => {
+	switch (status) {
+		case 'pass':
+			return 'success';
+		case 'fail':
+			return 'critical';
+		default:
+			return 'default';
+	}
+};
 
 export default function OrderDetail() {
 	const submit = useSubmit();
@@ -178,12 +195,18 @@ export default function OrderDetail() {
 	const [factories, setFactories] = useState([]);
 	const [factoriesOptions, setFactoriesOptions] = useState([]);
 	const [factory, setFactory] = useState("");
+	const [urgencyCheck, setUrgencyCheck] = useState(false);
 
 	const handleFactory = useCallback(
 		(value) => {
 			setFactory(value);
 			// setIsStatusAssigned(true);
 		},
+		[],
+	);
+
+	const handleUrgency = useCallback(
+		(newChecked) => setUrgencyCheck(newChecked),
 		[],
 	);
 
@@ -195,11 +218,14 @@ export default function OrderDetail() {
 		if (loadedData?.data?.factories) {
 			setFactories(loadedData?.data?.factories ?? []);
 		}
+		if (loadedData?.data?.urgencyStatus) {
+			setUrgencyCheck(loadedData?.data?.urgencyStatus?.isUrgent ?? false)
+		}
 	}, [loadedData])
 
 	useEffect(() => {
 		if (actionData) {
-			shopify.toast.show("factory saved Successfully!")
+			shopify.toast.show("Saved Successfully!")
 		}
 	}, [actionData]);
 
@@ -221,6 +247,7 @@ export default function OrderDetail() {
 			{
 				shopifyOrderId: loadedData.orderId,
 				factory: factory,
+				urgencyStatus: urgencyCheck,
 			},
 			{
 				action: "",
@@ -305,7 +332,18 @@ export default function OrderDetail() {
 		<>
 			{nav.state === 'loading' ? <Loader /> : null}
 			<Page
-				title={`Order ${orderData?.name}`}
+				title={
+					<div style={{display: 'flex', alignItems:'center'}}>
+						Order {orderData?.name}
+						{urgencyCheck && (
+							<div style={{marginLeft:'8px'}}>
+								<Badge tone="critical" >
+									Urgent
+								</Badge>
+							</div>
+						)}
+					</div>
+				}
 				backAction={{ url: `/app` }}
 				subtitle={`Created: ${dataTimeFormat(orderData?.createdAt)}`}
 				primaryAction={ (loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_orders')) ?  {
@@ -339,7 +377,8 @@ export default function OrderDetail() {
 												variant,
 												quantity,
 												image,
-												manufacturingStatus
+												manufacturingStatus,
+												qualityAssurance
 											} = item;
 											const handleClick = () => {
 												navigate(`/app/orderItem/${splitId(orderData?.id)}-${splitId(id)}`);
@@ -371,6 +410,11 @@ export default function OrderDetail() {
 															<Text as="h3" variant="bodyMd" fontWeight="bold">
 																Quantity: {quantity}
 															</Text>
+															{qualityAssurance?.status && (
+																<Text as="h3" variant="bodyMd" fontWeight="bold">
+																	QA: <Badge tone={getBadgeTone(qualityAssurance?.status)}>{qualityAssurance?.status.toUpperCase() || "-"}</Badge>
+																</Text>
+															)}
 														</div>
 														{manufacturingStatus && (
 															<div>
@@ -386,6 +430,13 @@ export default function OrderDetail() {
 							</Grid.Cell>
 							<Grid.Cell columnSpan={{ xs: 2, sm: 2, md: 2, lg: 4, xl: 4 }}>
 								<BlockStack gap="400">
+									<Card>
+										<Checkbox 
+											label="Mark as Urgent"
+											checked={urgencyCheck}
+											onChange={handleUrgency}
+										/>
+									</Card>
 									<Card>
 										<Select
 											label="Factory"
