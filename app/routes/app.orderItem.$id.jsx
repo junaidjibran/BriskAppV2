@@ -1052,26 +1052,29 @@ export default function LineItemDetails() {
 									</div>
 								</Card>
 								<BlockStack gap="300">
-									<div style={{ marginTop: "15px" }}>
-										<Card>
-											<TextField
-												label="Add Notes"
-												value={notesValue}
-												onChange={handleNotesChange}
-												multiline={2}
-												autoComplete="off"
-												placeholder='Add Notes.....'
-											/>
-											<div style={{ marginTop: "10px", textAlign: "end" }}>
-												<Button
-													onClick={handlePostClick}
-													loading={isPostLoading}
-													disabled={!notesValue.trim()}>
-													Post
-												</Button>
-											</div>
-										</Card>
-									</div>
+									{(loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('write_orders')) && (
+										<div style={{ marginTop: "15px" }}>
+											<Card>
+												<TextField
+													label="Add Notes"
+													value={notesValue}
+													onChange={handleNotesChange}
+													multiline={2}
+													autoComplete="off"
+													placeholder='Add Notes.....'
+												/>
+												<div style={{ marginTop: "10px", textAlign: "end" }}>
+													<Button
+														onClick={handlePostClick}
+														loading={isPostLoading}
+														disabled={!notesValue.trim()}>
+														Post
+													</Button>
+												</div>
+											</Card>
+										</div>
+									)
+									}
 									<BlockStack gap="100">
 										{/* <pre>
 											{ JSON.stringify(notes, null, 3) }
@@ -1079,7 +1082,7 @@ export default function LineItemDetails() {
 										{/* {loadedData && loadedData.notesData && loadedData.notesData.length > 0 && loadedData.notesData.map((note, index) => ( */}
 										{notes?.map((note, index) => (
 											<Card key={note?.id}>
-												<Text variant="headingMd" as='h3'>Created at: {dataTimeFormat(note.created_at)}</Text>
+												<Text variant="headingSm" as='h3'>Created at: {dataTimeFormat(note.created_at)}</Text>
 												{editNoteId === note.id ? (
 													<>
 														<TextField
@@ -1150,7 +1153,7 @@ export default function LineItemDetails() {
 										/>
 									</Card>
 									<Card>
-										<Text variant="bodyMd" as="p">
+										<Text variant="headingSm" as="h4">
 											Quality Assurance
 										</Text>
 										<div style={{margin: '10px 0px 15px 0px'}}>
@@ -1169,9 +1172,13 @@ export default function LineItemDetails() {
 												Reason : {reason || "-"}
 											</Text> */}
 										</div>
-										<Button variant='Secondary' fullWidth onClick={handleQualityModal}>
-											Edit
-										</Button>
+										{
+											(loadedData?.data?.isAdmin || loadedData?.data?.scopes?.includes('quality_assurance')) && (
+												<Button variant='primary' tone='critical' fullWidth onClick={handleQualityModal}>
+													Quality Assurance (QA)
+												</Button>
+											)
+										}
 									</Card>
 									</BlockStack>
 							</Grid.Cell>
