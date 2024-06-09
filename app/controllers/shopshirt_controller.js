@@ -2,7 +2,7 @@ import prisma from "../db.server";
 
 export async function prismaGetShopShirt(params) {
     try {
-        const { page, limit, shop } = params
+        const { page, limit, shop, searchIds } = params
         let query = {
             orderBy: {
                 created_at: 'desc',
@@ -11,6 +11,14 @@ export async function prismaGetShopShirt(params) {
                 shop: shop
             }
         };
+
+        if (searchIds?.length) {
+            query['where'] = {
+                product_id: {
+                    in: searchIds
+                }
+            }
+        }
 
         // if (searchQuery && searchQuery?.length) {
         //     query['where'] = {

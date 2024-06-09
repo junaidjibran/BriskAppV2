@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Thumbnail, Modal, Button, Card, Page, ResourceItem, ResourceList, Text, EmptyState } from "@shopify/polaris";
+import { Thumbnail, Modal, Button, Card, Page, ResourceItem, ResourceList, Text, EmptyState, Filters } from "@shopify/polaris";
 import { ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon } from '@shopify/polaris-icons';
 
 import SettingsNav from "../components/settingsNav";
@@ -15,7 +15,7 @@ import {
     useLocation,
 } from "@remix-run/react";
 import { fetchProductQuery } from '../queries/productQueries.js'
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { prismaGetShopShirt } from "../controllers/shopshirt_controller";
 import Loader from "../components/loader";
 import NotLoggedInScreen from "../components/notLoggedInScreen.jsx";
@@ -36,9 +36,35 @@ export async function loader({ request }) {
 
     const url = new URL(request.url);
     const page = url.searchParams.get("page");
-    // const searchQuery = url.searchParams.get("searchQuery");
+    const searchQuery = url.searchParams.get("searchQuery");
 
-    const [shopShirtItems, pagination] = await prismaGetShopShirt({ limit: 30, page, shop: session?.shop })
+    let searchIds = []
+
+    if (searchQuery?.length) {
+        console.log("searchQuery", searchQuery)
+        const searchProductResp = await admin.graphql(`#graphql
+            query SearchProducts($query: String!) {
+                products(first: 250, query: $query) {
+                    nodes {
+                        title
+                        id
+                    }
+                }
+            }
+        `,
+        {
+            variables: {
+                "query": searchQuery
+            }
+        });
+
+        const searchProductData = await searchProductResp.json();
+        searchIds = searchProductData?.data?.products?.nodes?.map(item => item?.id) ?? []
+        console.log("searchProductData", JSON.stringify(searchProductData, null, 4))
+        console.log("searchIds", JSON.stringify(searchIds, null, 4))
+    }
+
+    const [shopShirtItems, pagination] = await prismaGetShopShirt({ limit: 30, page, shop: session?.shop, searchIds })
 
     if (shopShirtItems.length) {
         // fetching products from shopify
@@ -122,6 +148,8 @@ export default function Shopshirt() {
     const [deleteModalOpen, setdeleteModalOpen] = useState(false);
     const [toDelete, setToDelete] = useState(null);
     const [pageInfo, setPageInfo] = useState(null);
+    const [queryValue, setQueryValue] = useState('');
+    const [isSearching, setIsSearching] = useState(false)
 
     // console.log("LoaderData", loaderData)
     // const [searchTerm, setSearchTerm] = useState("");
@@ -130,7 +158,7 @@ export default function Shopshirt() {
     // const lastPostInResults = loaderData?.firstQueryResults[1]?.id // Remember: zero-based index! :)
     // const myCursor = lastPostInResults?.id // Example: 52
 
-    console.log('--------loaderData', loaderData);
+    // console.log('--------loaderData', loaderData);
     // console.log('--------actionData', actionData);
 
     // useEffect(() => {
@@ -139,6 +167,28 @@ export default function Shopshirt() {
     //         setdeleteModalOpen(false)
     //     }
     // }, [actionData])
+    const handleFiltersQueryChange = useCallback((value) => {
+        setQueryValue(value)
+        setIsSearching(true)
+    }, []);
+
+    useEffect(() => {
+        // if (!isSearching) setIsSearching(true);
+        if (!queryValue && !isSearching) return
+    
+        const timeoutId = setTimeout(() => {
+          console.log("queryValue is ----------", queryValue)
+            // setIsSearching(true);
+        //   if (queryValue.length === 0 || queryValue.length >= 3) {
+            navigate(`/app/shopshirt?searchQuery=${queryValue}`)
+            // setIsSearching
+        //   }
+        }, 500);
+    
+        return () => {
+          clearTimeout(timeoutId);
+        };
+      }, [queryValue]);
 
     useEffect(() => {
         if (loaderData && loaderData?.data?.pageInfo) {
@@ -226,13 +276,21 @@ export default function Shopshirt() {
         )
     }
 
-
     return (
         <>
             {nav.state === 'loading' ? <Loader /> : null}
             <Page title="Shop Shirt">
                 <SettingsNav currentRoute={location} />
                 <Card>
+                    <Filters
+                        queryValue={ queryValue }
+                        queryPlaceholder="Search order number..."
+                        filters={ [] }
+                        onQueryChange={ handleFiltersQueryChange }
+                        onQueryClear={ () => { console.log("onQueryClear") } }
+                        onClearAll={ () => { console.log("onClearAll") } }
+                        // loading={ nav.state === 'loading' }
+                     />
                     <ResourceList
                         alternateTool={(loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_shopshirt')) ? <Button onClick={() => navigate("/app/shopshirt/new")}>Add New</Button> : null}
                         resourceName={{ singular: "Shop Shirt", plural: "Shop Shirts" }}

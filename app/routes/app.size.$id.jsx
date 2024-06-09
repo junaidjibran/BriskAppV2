@@ -230,13 +230,14 @@ export default function Size() {
                         /> */}
                         <TextField
                             type="number"
-                            name="meters"
-                            label="Meters*"
-                            helpText="Enter size of cloth in meters"
+                            name="yards"
+                            label="Yards*"
+                            helpText="Enter size of cloth in Yards"
                             value={sizeData.meters}
                             step={0.1}
                             onChange={ (value) => handleForm('meters', value) }
                             error={errors?.meters ?? ""}
+                            suffix="Yards"
                         />
                     </FormLayout>
                 </Card>

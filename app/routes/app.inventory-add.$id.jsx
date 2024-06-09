@@ -2,7 +2,7 @@ import { json, useActionData, useLoaderData, useNavigate, useNavigation, usePara
 import { Button, Card, Page, TextField, FormLayout, Text } from "@shopify/polaris"
 import { useCallback, useEffect, useState } from "react"
 import { STATUS_CODES } from "../helpers/response"
-import { getInventory, createInventory, updateInventory, getInventoryBySKU, inventoryTransactionsLog } from "../controllers/inventory.controller"
+import { getInventory, createInventory, updateInventory, getInventoryBySKU, inventoryTransactionsLogCreate } from "../controllers/inventory.controller"
 import Loader from "../components/loader"
 import { authenticate } from "../shopify.server"
 import { loggedInCheck } from "../controllers/users.controller"
@@ -61,7 +61,7 @@ export const action = async ({ request, params }) => {
 				new_inventory: newInventory?.inventory,
 				current_inventory: 0
 			}
-			const addInventoryLog = await inventoryTransactionsLog(inventroyLogTemp)
+			const addInventoryLog = await inventoryTransactionsLogCreate(inventroyLogTemp)
 			
 			return json({ data: { inventory: newInventory ?? null, inventroyLog: addInventoryLog }, status: 'success', message: "inventory created successfully." }, { status: STATUS_CODES.OK })
 		}
@@ -89,7 +89,7 @@ export const action = async ({ request, params }) => {
 			new_inventory: inventoryResp?.inventory,
 			current_inventory: getCurrentInvntoryBySKU?.inventory
 		}
-		const addInventoryLog = await inventoryTransactionsLog(inventroyLogTemp)
+		const addInventoryLog = await inventoryTransactionsLogCreate(inventroyLogTemp)
 
 		console.log("addInventoryLog", addInventoryLog)
 
@@ -222,7 +222,7 @@ export default function User() {
 								helpText="Enter inventory of product"
 								value={inventory}
 								onChange={handleInventory}
-								suffix="meters"
+								suffix="Yards"
 							/>
 							: <>
 								<div style={{ marginTop: '10px' }}>
@@ -233,7 +233,7 @@ export default function User() {
 										// step={0.1}
 										value={inventory}
 										disabled
-										suffix="meters"
+										suffix="Yards"
 									/>
 
 								</div>

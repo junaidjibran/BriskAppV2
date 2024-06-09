@@ -20,7 +20,7 @@ export async function getInventories(params) {
         }
 
         let pageInfo = {
-            limit: limit ?? 10,
+            limit: limit,
         }
         if (page) pageInfo['page'] = parseInt(page)
             
@@ -103,7 +103,7 @@ export async function deleteInventory({ id }) {
     }
 }
 
-export async function inventoryTransactionsLog({ sku, type, inventory, new_inventory, current_inventory }) {
+export async function inventoryTransactionsLogCreate({ sku, type, inventory, new_inventory, current_inventory }) {
     try {
         const updateInventory = await prisma.inventory_transactions.create({
             data: {
@@ -116,7 +116,39 @@ export async function inventoryTransactionsLog({ sku, type, inventory, new_inven
         })
         return updateInventory;
     } catch (error) {
-        console.error('ERROR: inventoryTransactionsLog() :: Controller => inventory.controller ::: Catch ::: ', error)
+        console.error('ERROR: inventoryTransactionsLogCreate() :: Controller => inventory.controller ::: Catch ::: ', error)
+    }
+}
+
+export async function inventoryTransactionsLogs(params) {
+    try {
+        const { page, searchQuery, limit } = params
+        let query = {
+            orderBy: {
+                createdAt: 'desc',
+            },
+        };
+
+        if (searchQuery && searchQuery?.length) {
+            query['where'] = {
+                sku: {
+                    contains: searchQuery
+                }
+            }
+        }
+
+        let pageInfo = {
+            limit: limit ?? 10,
+        }
+        if (page) pageInfo['page'] = parseInt(page);
+
+        const data = await prisma.inventory_transactions.paginate(query).withPages(pageInfo)
+
+        // console.log("inventoryTransactionsLogs================", JSON.stringify(data, null, 4));
+
+        return data;
+    } catch (error) {
+        console.error('ERROR: inventoryTransactionsLogs() :: Controller => inventory.controller ::: Catch ::: ', error)
     }
 }
 

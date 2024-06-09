@@ -179,7 +179,7 @@ export default function MetersPerSize() {
                             )
                         }
                         renderItem={(size) => {
-                            const { id, size_title: sizeTitle, cloth_meters: meters } = size;
+                            const { id, size_title: sizeTitle, cloth_meters: yards } = size;
                             const shortcutActions = (loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_inventory_settings')) ? [
                                 {
                                     content: 'Edit',
@@ -205,12 +205,12 @@ export default function MetersPerSize() {
                                     <div style={{ display: 'flex' }}>
                                         <div style={{ flex: "0 0 30%", marginRight: '10px' }}>
                                             <Text variant="bodyMd" fontWeight="bold" as="h3">
-                                                Size : {sizeTitle}
+                                                Size : { sizeTitle }
                                             </Text>
                                         </div>
 
                                         <Text variant="bodyMd" fontWeight="bold" as="h4">
-                                            Meter : {meters}
+                                            Yards : { yards }
                                         </Text>
 
                                     </div>
