@@ -274,9 +274,9 @@ export default function Login({ params }) {
                                         />
                                         <div style={{ display: "flex", justifyContent: "space-between" }}>
                                             <Button variant="primary" loading={isLoading} submit>Log in</Button>
-                                            <div style={{ display: "none" }}>
-                                                <Button variant="plain" onClick={handleToggleForm}>Go to Register</Button>
-                                            </div>
+                                            <Button variant="plain" onClick={handleToggleForm}>Go to Register</Button>
+                                            {/* <div style={{ display: "none" }}>
+                                            </div> */}
                                         </div>
                                     </FormLayout>
                                 </Form>
