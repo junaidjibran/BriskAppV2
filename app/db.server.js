@@ -17,7 +17,10 @@ const prismaExtentClient = new PrismaClient().$extends({
 		},
 		shopify_orders: {
 			paginate
-		}
+		},
+		inventory_transactions: {
+			paginate
+		},
 	},
 });
 

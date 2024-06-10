@@ -83,7 +83,6 @@ export default function Inventory() {
         if (loaderData?.data?.pageInfo) {
             setPageInfo(loaderData?.data?.pageInfo ?? null)
         }
-
     }, [loaderData])
 
     useEffect(() => {

@@ -181,7 +181,10 @@ export default function Orders({ params }) {
 
 
     // const handleQueryValueRemove = useCallback(() => setQueryValue(''), []);
-    const handleFiltersQueryChange = useCallback((value) => setQueryValue(value), [],);
+    const handleFiltersQueryChange = useCallback((value) => {
+        setQueryValue(value);
+        setIsSearching(true);
+    }, [],);
 
     useEffect(() => {
         if (loadedData && loadedData?.data?.pageInfo) {
@@ -191,21 +194,16 @@ export default function Orders({ params }) {
 
     // Debounce functionality...
     useEffect(() => {
-        // if (!currentUpdatedFeild) return
-
-        if (!isSearching) setIsSearching(true)
+        if (!queryValue && !isSearching) return
     
         const timeoutId = setTimeout(() => {
           console.log("queryValue is ----------", queryValue)
-          if (queryValue.length === 0 || queryValue.length >= 3) {
             navigate(`/app?searchQuery=${queryValue}`)
-          }
         }, 500);
     
         return () => {
           clearTimeout(timeoutId);
         };
-    
       }, [queryValue]);
 
 
@@ -277,7 +275,7 @@ export default function Orders({ params }) {
     // const isloading = nav.state === "loading";
     return (
         <>
-            {nav.state === 'loading' && !isSearching ? <Loader /> : null}
+            {nav.state === 'loading' ? <Loader /> : null}
             {/* <pre>
                 { JSON.stringify(pageinfo, null, 4) }
             </pre> */}
@@ -291,7 +289,7 @@ export default function Orders({ params }) {
                         onQueryChange={ handleFiltersQueryChange }
                         onQueryClear={ () => { console.log("onQueryClear") } }
                         onClearAll={ () => { console.log("onClearAll") } }
-                        loading={ nav.state === 'loading' && isSearching }
+                        // loading={ nav.state === 'loading' && isSearching }
                      />
                     {/* <TextField
                         label="Search"
