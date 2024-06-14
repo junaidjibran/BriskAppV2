@@ -310,7 +310,7 @@ export default function FactorySetting() {
                 <SettingsNav currentRoute={ routeLocation } />
                 <Card>
                     <ResourceList
-                        alternateTool={ loaderData?.data?.scopes?.includes('write_factory') ?  <Button onClick={ () => openModal('create') }>Add New</Button> : null }
+                        alternateTool={ (loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_factory')) ?  <Button onClick={ () => openModal('create') }>Add New</Button> : null }
                         resourceName={{ singular: 'factory', plural: 'factories' }}
                         items={ items }
                         emptyState={
@@ -328,7 +328,7 @@ export default function FactorySetting() {
                         }
                         renderItem={(item) => {
                             const { id, title, location } = item;
-                            const shortcutActions = loaderData?.data?.scopes?.includes('write_factory') ? [
+                            const shortcutActions = (loaderData?.data?.isAdmin || loaderData?.data?.scopes?.includes('write_factory')) ? [
                                 {
                                     content: 'Edit',
                                     icon: EditIcon,
