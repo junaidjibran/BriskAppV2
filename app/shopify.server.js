@@ -16,8 +16,8 @@ const shopify = shopifyApp({
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
   sessionStorage: new MongoDBSessionStorage(
-    process.env.DB_URL_NO_NAME,
-    process.env.DB_NAME
+    process.env.DATABASE_URL_NO_DB,
+    process.env.DATABASE_NAME
   ),
   distribution: AppDistribution.AppStore,
   restResources,
