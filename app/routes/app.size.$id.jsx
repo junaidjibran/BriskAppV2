@@ -178,7 +178,7 @@ export default function Size() {
         )
     }
 
-    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_invendtory_settings')) {
+    if (!loaderData?.data?.isAdmin && !loaderData?.data?.scopes?.includes('write_inventory_settings')) {
         return (
             <>
                 <Page title="Update size">

@@ -1,0 +1,29 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "c7278c57728042374bc715277e6a58cb"
+name = "Brisk Testing Phase 2"
+handle = "brisk-testing-phase-2"
+application_url = "https://brisk-test-31f41e977ae5.herokuapp.com/"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = false
+dev_store_url = "checkout-testing-app.myshopify.com"
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,read_orders,write_files,write_products"
+
+[auth]
+redirect_urls = [
+  "https://brisk-test-31f41e977ae5.herokuapp.com/auth/callback",
+  "https://brisk-test-31f41e977ae5.herokuapp.com/auth/shopify/callback",
+  "https://brisk-test-31f41e977ae5.herokuapp.com/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-07"
+
+[pos]
+embedded = false
