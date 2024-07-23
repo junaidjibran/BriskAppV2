@@ -55,10 +55,11 @@ export const action = async ({ request }) => {
   } else if (request.method === 'PATCH') {
     const webhookId = formData.get('webhookId')
     const topic = formData.get('topic');
-    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98f.ngrok-free.app'
+    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98e.ngrok-free.app/'
     console.log("request.method", request.method);
 
     const targetWebhooks = appWebhooks?.find(item => item?.topic === topic)
+    console.log(" targetWebhooks", JSON.stringify(targetWebhooks, null , 4))
 
     const webhook = new admin.rest.resources.Webhook({ session: session });
     webhook.id = webhookId;
@@ -72,7 +73,7 @@ export const action = async ({ request }) => {
   } else if (request.method === 'POST') {
     const topic = formData.get('topic');
     console.log("request.method", request.method, topic)
-    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98f.ngrok-free.app'
+    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98f.ngrok-free.app/'
     console.log("request.method", request.method);
 
     const targetWebhooks = appWebhooks?.find(item => item?.topic === topic)
