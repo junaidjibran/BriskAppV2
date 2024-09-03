@@ -107,7 +107,7 @@ export const loader = async ({ request, params }) => {
 
 		// console.log("getDbOrder", JSON.stringify(getDbOrder?.line_items, null, 4))
 
-		shopifyOrder.lineItems.forEach(item => {
+		shopifyOrder?.lineItems?.forEach(item => {
 			const getID = item?.id.split('/').pop()
 			// console.log("getID", getID)
 			const matchDbOrder = getDbOrder?.line_items?.find(dbID => dbID?.id === parseInt(getID))
