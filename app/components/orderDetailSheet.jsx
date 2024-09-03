@@ -31,6 +31,15 @@ export default function OrderDetailSheet({ data }) {
 								Order {data?.name}
 							</h2>
 							<p style={{ margin: "0", fontSize: "14px", }}>{dataTimeFormat(data?.createdAt)}</p>
+							<br/>
+							<h2 style={{ margin: "0", fontSize: "18px", }}>
+								Shipping Address
+							</h2>
+							<p style={{ margin: "0", fontSize: "14px", }}>{ data?.shippingAddress?.address1 }</p>
+							<p style={{ margin: "0", fontSize: "14px", }}>{ data?.shippingAddress?.address2 }</p>
+							<p style={{ margin: "0", fontSize: "14px", }}>{ data?.shippingAddress?.city } {"  "} { data?.shippingAddress?.zip }</p>
+							<p style={{ margin: "0", fontSize: "14px", }}>{ data?.shippingAddress?.province }</p>
+							<p style={{ margin: "0", fontSize: "14px", }}>{ data?.shippingAddress?.country }</p>
 						</div>
 					</div>
 

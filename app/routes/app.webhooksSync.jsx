@@ -55,7 +55,7 @@ export const action = async ({ request }) => {
   } else if (request.method === 'PATCH') {
     const webhookId = formData.get('webhookId')
     const topic = formData.get('topic');
-    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98e.ngrok-free.app/'
+    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://alexandria-pro-directors-interim.trycloudflare.com/'
     console.log("request.method", request.method);
 
     const targetWebhooks = appWebhooks?.find(item => item?.topic === topic)
@@ -73,7 +73,7 @@ export const action = async ({ request }) => {
   } else if (request.method === 'POST') {
     const topic = formData.get('topic');
     console.log("request.method", request.method, topic)
-    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98f.ngrok-free.app/'
+    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://alexandria-pro-directors-interim.trycloudflare.com/'
     console.log("request.method", request.method);
 
     const targetWebhooks = appWebhooks?.find(item => item?.topic === topic)
@@ -97,7 +97,7 @@ export const action = async ({ request }) => {
     const deleteWebHookData = await deleteWebHook.json()
     console.log("deleteWebHookData", JSON.stringify(deleteWebHookData, null, 4));
     // const topic = formData.get('topic');
-    // const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98f.ngrok-free.app'
+    // const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://alexandria-pro-directors-interim.trycloudflare.com'
     // console.log("request.method", request.method);
 
     // const targetWebhooks = appWebhooks?.find(item => item?.topic === topic)
@@ -185,7 +185,7 @@ export default function WebhooksSync() {
               <InlineStack align="space-between" blockAlign="center">
                 <div style={{ marginBottom: '15px' }}>
                   <Text as="p">Sync webhooks</Text>
-                  <Text as="p">{process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98f.ngrok-free.app'}</Text>
+                  <Text as="p">{process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://alexandria-pro-directors-interim.trycloudflare.com'}</Text>
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
                   <Button variant="primary" onClick={handleSyncWebhooks}>Sync</Button>
