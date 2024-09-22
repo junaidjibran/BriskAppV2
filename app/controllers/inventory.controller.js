@@ -170,14 +170,14 @@ export async function inventoryTransactions({ lineItems, type, orderName }) {
             let getTargetSize = null;
 
             // find target size in variant options
-            const isVariantOptionSize = getSizesDB.find(item => {
+            const isVariantOptionSize = getSizesDB?.find(item => {
                 const split = lineitem?.variantTitle?.split(" / ")
-                return split.includes(item?.size_title)
+                return split?.includes(item?.size_title)
             })
 
             // find target size in lineitem properties
-            const isLineItemProperties = getSizesDB.find(size => {
-                const findProp = lineitem?.properties.find(prop => sizeKeys.includes(prop?.name));
+            const isLineItemProperties = getSizesDB?.find(size => {
+                const findProp = lineitem?.properties?.find(prop => sizeKeys?.includes(prop?.name));
                 return size?.size_title === findProp?.value;
             });
 

@@ -6,5 +6,9 @@ export const appWebhooks = [
   {
     topic : 'orders/create',
     address: 'webhookOrderTagging'
+  },
+  {
+    topic : 'orders/updated',
+    address: 'webhookOrderTagging'
   }
 ]

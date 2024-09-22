@@ -89,7 +89,64 @@ export async function action({ request }) {
         // console.log("checkInDB", JSON.stringify(checkInDB, null, 4));
 
         if (checkInDB) {
-            return json({ status: 'error', message: "This order is already exist in App" }, { status: STATUS_CODES.FORBIDDEN })
+            // console.log("shopifyOrdersData =======>", JSON.stringify(shopifyOrdersData, null, 4));
+            // console.log("checkInDB =======>", JSON.stringify(checkInDB, null, 4));
+
+            const orderShopifyLineItems = shopifyOrdersData?.data?.node?.lineItems?.nodes ?? [];
+            const orderDBLineItems = checkInDB?.line_items ?? [];
+
+            // console.log("orderShopifyLineItems =======>", JSON.stringify(orderShopifyLineItems, null, 4));
+            // console.log("orderDBLineItems =======>", JSON.stringify(orderDBLineItems, null, 4));
+
+            if (orderShopifyLineItems?.length === orderDBLineItems?.length) {
+                return json({ status: 'error', message: "This order is already exist in App" }, { status: STATUS_CODES.FORBIDDEN })
+            }
+
+            // Extract IDs from orderDBLineItems
+            const dbItemIds = orderDBLineItems.map(item => item.id);
+
+            // Filter Shopify line items to find those not in DB
+            const missingItems = orderShopifyLineItems.filter(item => {
+                const itemId = parseInt(item.id.split('/').pop()); // Get numeric ID from Shopify format
+                return !dbItemIds.includes(itemId);
+            });
+
+            // console.log("itemsNotInDB", JSON.stringify(missingItems, null, 4))
+
+            const refactorItemData = missingItems.map(item => {
+                let id = parseInt(item?.id?.split('/').pop()) ?? null;
+                let name = item?.name ?? null;
+                let price = item?.variant?.price ?? null;
+                let sku = item?.sku ?? null;
+                let quantity = item?.quantity ?? null;
+                let title = item?.title ?? null;
+                let variantTitle = item?.variantTitle ?? null;
+                let properties = item?.customAttributes?.map(prop => {
+                    let name = prop?.key ?? null;
+                    let value = prop?.value ?? null;
+                    return { name, value }
+                });
+                let variantID = parseInt(item?.variant?.id?.split("/").pop()) ?? null;
+                let productID = parseInt(item?.product?.id?.split('/').pop()) ?? null;
+                return { id, name, price, sku, quantity, title, variantTitle, properties, variantID, productID }
+            })
+
+            // console.log("refactorItemData", JSON.stringify(refactorItemData, null, 4))
+
+            const resp  = await prisma.shopify_orders.update({
+                where: {
+                    shopify_order_id: orderID // or use `id: "your_document_id"`
+                },
+                data: {
+                    line_items: {
+                        push: refactorItemData
+                    }
+                }
+            })
+
+            console.log("resp", JSON.stringify(resp, null, 4))
+            return json({ status: 'success', message: "Order lineitems successfull sync with App" }, { status: STATUS_CODES.CREATED })
+            
         }
 
         const orderName = shopifyOrdersData?.data?.node?.name;
