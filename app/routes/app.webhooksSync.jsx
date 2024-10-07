@@ -1,12 +1,11 @@
 import { Layout, Page, Text, Card, InlineStack, Button, Banner, ResourceList, ResourceItem } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { json } from "@remix-run/node";
-import { useActionData, useSubmit, useLoaderData } from "@remix-run/react";
+import { useActionData, useSubmit, useLoaderData, useNavigation } from "@remix-run/react";
 import { syncWebhooks } from "../controllers/webhooksController";
 import { appWebhooks } from "../constants/webhooks";
 import { RefreshIcon } from "@shopify/polaris-icons";
-
-const APP_URL = process.env.SHOPIFY_APP_URL
+import { useEffect } from "react";
 
 export const loader = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
@@ -57,7 +56,7 @@ export const action = async ({ request }) => {
   } else if (request.method === 'PATCH') {
     const webhookId = formData.get('webhookId')
     const topic = formData.get('topic');
-    const appUrl = process.env.NODE_ENV === 'production' ? APP_URL : 'https://alexandria-pro-directors-interim.trycloudflare.com/'
+    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://5372-2401-ba80-aa90-c9c0-f103-893b-fcb0-3b52.ngrok-free.app/'
     console.log("request.method", request.method);
 
     const targetWebhooks = appWebhooks?.find(item => item?.topic === topic)
@@ -75,7 +74,7 @@ export const action = async ({ request }) => {
   } else if (request.method === 'POST') {
     const topic = formData.get('topic');
     console.log("request.method", request.method, topic)
-    const appUrl = process.env.NODE_ENV === 'production' ? APP_URL : 'https://alexandria-pro-directors-interim.trycloudflare.com/'
+    const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://5372-2401-ba80-aa90-c9c0-f103-893b-fcb0-3b52.ngrok-free.app/'
     console.log("request.method", request.method);
 
     const targetWebhooks = appWebhooks?.find(item => item?.topic === topic)
@@ -99,7 +98,7 @@ export const action = async ({ request }) => {
     const deleteWebHookData = await deleteWebHook.json()
     console.log("deleteWebHookData", JSON.stringify(deleteWebHookData, null, 4));
     // const topic = formData.get('topic');
-    // const appUrl = process.env.NODE_ENV === 'production' ? APP_URL : 'https://alexandria-pro-directors-interim.trycloudflare.com'
+    // const appUrl = process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://fd1f-2400-adc5-406-6300-5834-682-c011-b98f.ngrok-free.app'
     // console.log("request.method", request.method);
 
     // const targetWebhooks = appWebhooks?.find(item => item?.topic === topic)
@@ -121,11 +120,24 @@ export const action = async ({ request }) => {
 export default function WebhooksSync() {
   const submit = useSubmit();
   const loaderData = useLoaderData();
+  const nav = useNavigation();
   let { webhooksToBeRegistered, webhooks } = loaderData;
   const actionData = useActionData();
 
   console.log('----loaderdata', loaderData)
   console.log('----actionData', actionData)
+
+  const isPageLoading = ["loading"].includes(nav.state);
+
+  useEffect(() => {
+    if (isPageLoading) {
+        shopify.loading(true);
+    }
+
+    return () => {
+        shopify.loading(false);
+    }
+}, [isPageLoading])
 
   const handleSyncWebhooks = () => {
     webhooksToBeRegistered = JSON.stringify(webhooksToBeRegistered);
@@ -187,7 +199,7 @@ export default function WebhooksSync() {
               <InlineStack align="space-between" blockAlign="center">
                 <div style={{ marginBottom: '15px' }}>
                   <Text as="p">Sync webhooks</Text>
-                  <Text as="p">{process.env.NODE_ENV === 'production' ? APP_URL : 'https://alexandria-pro-directors-interim.trycloudflare.com'}</Text>
+                  <Text as="p">{process.env.NODE_ENV === 'production' ? process.env.SHOPIFY_APP_URL : 'https://5372-2401-ba80-aa90-c9c0-f103-893b-fcb0-3b52.ngrok-free.app/'}</Text>
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
                   <Button variant="primary" onClick={handleSyncWebhooks}>Sync</Button>

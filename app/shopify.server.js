@@ -30,6 +30,10 @@ const shopify = shopifyApp({
       deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhookOrderTagging",
     },
+    ORDERS_UPDATED: {
+      deliveryMethod: DeliveryMethod.Http,
+      callbackUrl: "/webhookOrderTagging",
+    },
   },
   hooks: {
     afterAuth: async ({ session }) => {

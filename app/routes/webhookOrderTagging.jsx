@@ -3,6 +3,7 @@ import { authenticate } from "../shopify.server";
 // import { createOrderTagLog } from "~/controllers/ordertagging";
 import { orderCreation } from "../controllers/ordersController";
 import { inventoryTransactions } from "../controllers/inventory.controller";
+import prisma from "../db.server";
 // import { inventoryTransactions } from "../controllers/inventory.controller";
 // import { appSubscriptionUpdated } from "~/controllers/subscriptionController";
 
@@ -15,7 +16,7 @@ console.log("TARGET_COLLECTION", TARGET_COLLECTION)
 
 
 export const action = async ({ request }) => {
-	const { shop, admin, payload } = await authenticate.webhook(request);
+	const { shop, admin, payload, topic } = await authenticate.webhook(request);
 	// 
 	// console.log('---------subs called')
 	if (!admin) {
@@ -30,7 +31,7 @@ export const action = async ({ request }) => {
 			console.log("has Session-------------------")
 			const statusArray = [];
 			const payloadLineItems = payload?.line_items;
-			console.log("Shopify webhook order payload", shop, JSON.stringify(payloadLineItems, null, 4));
+			// console.log("Shopify webhook order payload", shop, JSON.stringify(payloadLineItems, null, 4));
 
 			for (let index = 0; index < payloadLineItems.length; index++) {
 				const lineItem = payloadLineItems[index];
@@ -80,31 +81,100 @@ export const action = async ({ request }) => {
 				// 	last_name: payload?.customer?.last_name,
 				// 	email: payload?.customer?.email,
 				// } : null;
-				const lineItems = payload?.line_items?.map(item => {
-					let id = item?.id ?? null;
-					let name = item?.name ?? null;
-					let price = item?.price ?? null;
-					let sku = item?.sku ?? null;
-					let quantity = item?.quantity ?? null;
-					let title = item?.title ?? null;
-					let variantTitle = item?.variant_title ?? null;
-					let properties = item?.properties;
-					let variantID = item?.variant_id;
-					let productID = item?.product_id
-					return { id, name, price, sku, quantity, title, variantTitle, properties, variantID, productID }
-				})
-				const tempPayload = {
-					orderID, orderName, lineItems, createdAt
-				}
-				console.log("payload-------------", JSON.stringify(tempPayload, null, 4))
-				const dbCall = await orderCreation({ orderID, orderName, lineItems, shop, createdAt });
-				
-				console.log("DB call for save order Data-==-=--=-=-=-=-=-=-=-=-=-=-=-=", JSON.stringify(dbCall, null, 4));
 
-				if (dbCall) {
-					const inventoryTransaction = await inventoryTransactions({ lineItems, type: "REMOVE", orderName })
-					console.log("inventoryTransaction-==-=--=-=-=-=-=-=-=-=-=-=-=-=", JSON.stringify(inventoryTransaction, null, 4));
+				if (topic === 'ORDERS_CREATE') {
+					console.log("ORDERS_CREATE :: Topic")
+					const lineItems = payload?.line_items?.map(item => {
+						let id = item?.id ?? null;
+						let name = item?.name ?? null;
+						let price = item?.price ?? null;
+						let sku = item?.sku ?? null;
+						let quantity = item?.quantity ?? null;
+						let title = item?.title ?? null;
+						let variantTitle = item?.variant_title ?? null;
+						let properties = item?.properties;
+						let variantID = item?.variant_id;
+						let productID = item?.product_id
+						return { id, name, price, sku, quantity, title, variantTitle, properties, variantID, productID }
+					})
+					const tempPayload = {
+						orderID, orderName, lineItems, createdAt
+					}
+					console.log("payload-------------", JSON.stringify(tempPayload, null, 4))
+					const dbCall = await orderCreation({ orderID, orderName, lineItems, shop, createdAt });
+					
+					console.log("DB call for save order Data-==-=--=-=-=-=-=-=-=-=-=-=-=-=", JSON.stringify(dbCall, null, 4));
+					if (dbCall) {
+						const inventoryTransaction = await inventoryTransactions({ lineItems, type: "REMOVE", orderName })
+						console.log("inventoryTransaction-==-=--=-=-=-=-=-=-=-=-=-=-=-=", JSON.stringify(inventoryTransaction, null, 4));
+					}
+				} else if (topic === 'ORDERS_UPDATED') {
+					console.log("ORDERS_UPDATED :: Topic");
+
+					const getDBOrder = await prisma.shopify_orders.findUnique({
+						where: {
+							shopify_order_id: orderID?.toString()
+						}
+					})
+
+					if (getDBOrder) {
+						const orderShopifyLineItems = payload?.line_items ?? [];
+						const orderDBLineItems = getDBOrder?.line_items ?? [];
+
+						// console.log("orderShopifyLineItems =======>", JSON.stringify(orderShopifyLineItems, null, 4));
+						// console.log("orderDBLineItems =======>", JSON.stringify(orderDBLineItems, null, 4));
+
+						if (orderShopifyLineItems?.length !== orderDBLineItems?.length) {
+
+							// Extract IDs from orderDBLineItems
+							const dbItemIds = orderDBLineItems.map(item => item.id);
+
+							// Filter Shopify line items to find those not in DB
+							const missingItems = orderShopifyLineItems.filter(item => {
+								const itemId = item.id; // Get numeric ID from Shopify format
+								return !dbItemIds.includes(itemId);
+							});
+
+							// console.log("itemsNotInDB", JSON.stringify(missingItems, null, 4))
+							const refactorItemData = missingItems?.map(item => {
+								let id = item?.id ?? null;
+								let name = item?.name ?? null;
+								let price = item?.price ?? null;
+								let sku = item?.sku ?? null;
+								let quantity = item?.quantity ?? null;
+								let title = item?.title ?? null;
+								let variantTitle = item?.variant_title ?? null;
+								let properties = item?.properties;
+								let variantID = item?.variant_id;
+								let productID = item?.product_id
+								return { id, name, price, sku, quantity, title, variantTitle, properties, variantID, productID }
+							})
+
+							// console.log("refactorItemData :: itemsNotInDB", JSON.stringify(refactorItemData, null, 4))
+
+							if (refactorItemData?.length) {
+								const updateDBOrderLineItems = await prisma.shopify_orders.update({
+									where: {
+										shopify_order_id: orderID?.toString() // or use `id: "your_document_id"`
+									},
+									data: {
+										line_items: {
+											push: refactorItemData
+										}
+									}
+								})
+	
+								console.log("updateDBOrderLineItems", JSON.stringify(updateDBOrderLineItems, null, 4))
+	
+								if (updateDBOrderLineItems) {
+									const inventoryTransaction = await inventoryTransactions({ lineItems: refactorItemData, type: "REMOVE", orderName })
+									console.log("inventoryTransaction-==-=--=-=-=-=-=-=-=-=-=-=-=-=", JSON.stringify(inventoryTransaction, null, 4));
+								}
+							}
+						}
+					}
 				}
+
 
 				// const getOrderTags = await admin.graphql.query({
 				// 	data: {
@@ -185,7 +255,7 @@ export const action = async ({ request }) => {
 				// 	// console.log("setOrderTags---------------------------", JSON.stringify(setOrderTags, null, 4))
 				// }
 			}
-			throw new Response("{}", { status: STATUS_CODES.OK });
+			throw new Response(`${ topic === 'ORDERS_UPDATED' ? 'Order update success' : topic === 'ORDERS_CREATE' ? 'Order create success' : 'Webhook Sucess' }`, { status: STATUS_CODES.OK });
 		}
 	}
 	catch (err) {
